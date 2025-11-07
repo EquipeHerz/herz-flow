@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Building2, Phone, MapPin, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,8 +9,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ImageGalleryModal } from "./ImageGalleryModal";
 
 const Clients = () => {
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<{ images: string[]; name: string; initialIndex: number } | null>(null);
+
   const clients = [
     {
       name: "Hotel Serra Azul",
@@ -117,7 +122,11 @@ const Clients = () => {
                           key={idx}
                           src={img} 
                           alt={`${client.name} ${idx + 1}`}
-                          className="w-full h-48 object-cover rounded-lg"
+                          className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            setSelectedClient({ images: client.images, name: client.name, initialIndex: idx });
+                            setGalleryOpen(true);
+                          }}
                         />
                       ))}
                     </div>
@@ -135,6 +144,16 @@ const Clients = () => {
             </Dialog>
           ))}
         </div>
+
+        {selectedClient && (
+          <ImageGalleryModal
+            images={selectedClient.images}
+            clientName={selectedClient.name}
+            initialIndex={selectedClient.initialIndex}
+            isOpen={galleryOpen}
+            onClose={() => setGalleryOpen(false)}
+          />
+        )}
       </div>
     </section>
   );

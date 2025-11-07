@@ -14,13 +14,35 @@ const Login = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Mock authentication - in production, this would be a real API call
-    if (credentials.email && credentials.password) {
+    // Mock authentication with different user types
+    const users = {
+      "admin": { password: "admin123", role: "admin", name: "Administrador" },
+      "techsolutions": { password: "tech123", role: "empresa", name: "Tech Solutions" },
+      "joao.silva": { password: "joao123", role: "cliente", name: "João Silva" }
+    };
+
+    const user = users[credentials.email as keyof typeof users];
+    
+    if (user && user.password === credentials.password) {
+      // Save session to localStorage
+      localStorage.setItem("userSession", JSON.stringify({
+        username: credentials.email,
+        role: user.role,
+        name: user.name,
+        loginTime: new Date().toISOString()
+      }));
+
       toast({
         title: "Login realizado com sucesso!",
-        description: "Redirecionando para o dashboard...",
+        description: `Bem-vindo, ${user.name}!`,
       });
       setTimeout(() => navigate("/dashboard"), 1000);
+    } else {
+      toast({
+        title: "Erro no login",
+        description: "Usuário ou senha incorretos.",
+        variant: "destructive"
+      });
     }
   };
 

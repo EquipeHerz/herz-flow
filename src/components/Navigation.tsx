@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "./ThemeToggle";
 import logoDark from "@/assets/logo-dark.jpg";
 import logoLight from "@/assets/logo-light.png";
 
@@ -52,6 +53,7 @@ const Navigation = () => {
                 {link.name}
               </a>
             ))}
+            <ThemeToggle />
             <Link to="/login">
               <Button variant="outline" className="border-accent text-accent hover:bg-accent hover:text-background">
                 Dashboard
@@ -81,11 +83,14 @@ const Navigation = () => {
                 {link.name}
               </a>
             ))}
-            <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-              <Button variant="outline" className="w-full border-accent text-accent hover:bg-accent hover:text-background">
-                Dashboard
-              </Button>
-            </Link>
+            <div className="flex items-center justify-between pt-2">
+              <ThemeToggle />
+              <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="flex-1 ml-4">
+                <Button variant="outline" className="w-full border-accent text-accent hover:bg-accent hover:text-background">
+                  Dashboard
+                </Button>
+              </Link>
+            </div>
           </div>
         )}
       </div>

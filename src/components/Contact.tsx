@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import MapComponent from "./MapComponent";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -109,6 +110,11 @@ const Contact = () => {
               Enviar Mensagem
             </Button>
           </form>
+        </div>
+
+        <div className="max-w-5xl mx-auto mt-12">
+          <h3 className="text-2xl font-semibold text-foreground mb-6 text-center">Nossa Localização</h3>
+          <MapComponent />
         </div>
       </div>
     </section>
