@@ -57,6 +57,15 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        hero: {
+          start: "hsl(var(--hero-gradient-start))",
+          end: "hsl(var(--hero-gradient-end))",
+        },
+        float: {
+          cyan: "hsl(var(--float-cyan))",
+          blue: "hsl(var(--float-blue))",
+          slate: "hsl(var(--float-slate))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
