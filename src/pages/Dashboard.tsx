@@ -33,9 +33,7 @@ interface Conversation {
   clientName: string;
   empresa: string;
   messages: number;
-  satisfaction: number;
   lastInteraction: string;
-  status: "Ativo" | "Normal" | "Resolvido";
   date: string;
   preview: string;
 }
@@ -50,21 +48,20 @@ const Dashboard = () => {
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
   const [filterEmpresa, setFilterEmpresa] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
   const itemsPerPage = 8;
 
   // Mock conversations data
   const allConversations: Conversation[] = [
-    { id: "001", clientName: "João Silva", empresa: "Tech Solutions", messages: 342, satisfaction: 96, lastInteraction: "Há 2 horas", status: "Ativo", date: "2024-01-15", preview: "Preciso de ajuda com reserva..." },
-    { id: "002", clientName: "Maria Santos", empresa: "Tech Solutions", messages: 278, satisfaction: 94, lastInteraction: "Há 5 horas", status: "Ativo", date: "2024-01-15", preview: "Quais são os horários disponíveis?" },
-    { id: "003", clientName: "Pedro Costa", empresa: "Hotel Imperial", messages: 189, satisfaction: 92, lastInteraction: "Há 1 dia", status: "Normal", date: "2024-01-14", preview: "Gostaria de informações sobre..." },
-    { id: "004", clientName: "Ana Oliveira", empresa: "Tech Solutions", messages: 156, satisfaction: 95, lastInteraction: "Há 2 dias", status: "Resolvido", date: "2024-01-13", preview: "Obrigada pelo atendimento!" },
-    { id: "005", clientName: "Carlos Mendes", empresa: "Hotel Imperial", messages: 234, satisfaction: 89, lastInteraction: "Há 3 horas", status: "Ativo", date: "2024-01-15", preview: "Preciso cancelar uma reserva..." },
-    { id: "006", clientName: "Juliana Lima", empresa: "Turismo Aventura", messages: 167, satisfaction: 97, lastInteraction: "Há 6 horas", status: "Normal", date: "2024-01-15", preview: "Quais pacotes vocês oferecem?" },
-    { id: "007", clientName: "Roberto Alves", empresa: "Tech Solutions", messages: 289, satisfaction: 93, lastInteraction: "Há 1 dia", status: "Resolvido", date: "2024-01-14", preview: "Perfeito, muito obrigado!" },
-    { id: "008", clientName: "Fernanda Rocha", empresa: "Turismo Aventura", messages: 198, satisfaction: 91, lastInteraction: "Há 4 horas", status: "Ativo", date: "2024-01-15", preview: "Gostaria de mais informações..." },
-    { id: "009", clientName: "Lucas Ferreira", empresa: "Hotel Imperial", messages: 145, satisfaction: 88, lastInteraction: "Há 2 dias", status: "Normal", date: "2024-01-13", preview: "Qual o melhor horário para..." },
-    { id: "010", clientName: "Camila Souza", empresa: "Tech Solutions", messages: 312, satisfaction: 96, lastInteraction: "Há 1 hora", status: "Ativo", date: "2024-01-15", preview: "Preciso atualizar meus dados..." }
+    { id: "001", clientName: "João Silva", empresa: "Tech Solutions", messages: 342, lastInteraction: "Há 2 horas", date: "2024-01-15", preview: "Preciso de ajuda com reserva..." },
+    { id: "002", clientName: "Maria Santos", empresa: "Tech Solutions", messages: 278, lastInteraction: "Há 5 horas", date: "2024-01-15", preview: "Quais são os horários disponíveis?" },
+    { id: "003", clientName: "Pedro Costa", empresa: "Hotel Imperial", messages: 189, lastInteraction: "Há 1 dia", date: "2024-01-14", preview: "Gostaria de informações sobre..." },
+    { id: "004", clientName: "Ana Oliveira", empresa: "Tech Solutions", messages: 156, lastInteraction: "Há 2 dias", date: "2024-01-13", preview: "Obrigada pelo atendimento!" },
+    { id: "005", clientName: "Carlos Mendes", empresa: "Hotel Imperial", messages: 234, lastInteraction: "Há 3 horas", date: "2024-01-15", preview: "Preciso cancelar uma reserva..." },
+    { id: "006", clientName: "Juliana Lima", empresa: "Turismo Aventura", messages: 167, lastInteraction: "Há 6 horas", date: "2024-01-15", preview: "Quais pacotes vocês oferecem?" },
+    { id: "007", clientName: "Roberto Alves", empresa: "Tech Solutions", messages: 289, lastInteraction: "Há 1 dia", date: "2024-01-14", preview: "Perfeito, muito obrigado!" },
+    { id: "008", clientName: "Fernanda Rocha", empresa: "Turismo Aventura", messages: 198, lastInteraction: "Há 4 horas", date: "2024-01-15", preview: "Gostaria de mais informações..." },
+    { id: "009", clientName: "Lucas Ferreira", empresa: "Hotel Imperial", messages: 145, lastInteraction: "Há 2 dias", date: "2024-01-13", preview: "Qual o melhor horário para..." },
+    { id: "010", clientName: "Camila Souza", empresa: "Tech Solutions", messages: 312, lastInteraction: "Há 1 hora", date: "2024-01-15", preview: "Preciso atualizar meus dados..." }
   ];
 
   useEffect(() => {
@@ -113,13 +110,8 @@ const Dashboard = () => {
       filtered = filtered.filter(conv => conv.empresa === filterEmpresa);
     }
 
-    // Status filter
-    if (filterStatus !== "all") {
-      filtered = filtered.filter(conv => conv.status === filterStatus);
-    }
-
     return filtered;
-  }, [allConversations, session, searchTerm, dateStart, dateEnd, filterEmpresa, filterStatus]);
+  }, [allConversations, session, searchTerm, dateStart, dateEnd, filterEmpresa]);
 
   // Pagination
   const totalPages = Math.ceil(filteredConversations.length / itemsPerPage);
@@ -137,15 +129,11 @@ const Dashboard = () => {
       : [];
 
     const totalMessages = conversations.reduce((sum, conv) => sum + conv.messages, 0);
-    const avgSatisfaction = conversations.length > 0
-      ? (conversations.reduce((sum, conv) => sum + conv.satisfaction, 0) / conversations.length).toFixed(1)
-      : "0";
-    const activeClients = conversations.filter(c => c.status === "Ativo").length;
+    const totalConversations = conversations.length;
 
     return [
       { label: "Total de Interações", value: totalMessages.toString(), icon: MessageSquare, change: "+12.5%" },
-      { label: "Taxa de Satisfação", value: `${avgSatisfaction}%`, icon: TrendingUp, change: "+2.3%" },
-      { label: "Conversas Ativas", value: activeClients.toString(), icon: Users, change: "+3" },
+      { label: "Total de Conversas", value: totalConversations.toString(), icon: Users, change: "+8" },
       { label: "Média de Resposta", value: "1.2s", icon: Calendar, change: "-0.3s" }
     ];
   }, [session, allConversations]);
@@ -173,22 +161,6 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center space-x-2">
               <ThemeToggle />
-              <Button
-                variant={viewMode === "grid" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-                className="hidden sm:flex"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className="hidden sm:flex"
-              >
-                <List className="h-4 w-4" />
-              </Button>
               <Button variant="destructive" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline ml-2">Sair</span>
@@ -201,7 +173,7 @@ const Dashboard = () => {
       <main className="container mx-auto px-6 py-8">
         {/* Stats Cards - Only for Admin and Empresa */}
         {showStats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
             {stats.map((stat, index) => (
               <Card key={index} className="p-6 border-border/50">
                 <div className="flex items-center justify-between mb-4">
@@ -219,7 +191,7 @@ const Dashboard = () => {
 
         {/* Filters */}
         <Card className="p-6 mb-6 border-border/50">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -254,25 +226,32 @@ const Dashboard = () => {
                 </SelectContent>
               </Select>
             )}
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="Ativo">Ativo</SelectItem>
-                <SelectItem value="Normal">Normal</SelectItem>
-                <SelectItem value="Resolvido">Resolvido</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </Card>
 
         {/* Conversations List */}
         <Card className="p-6 border-border/50">
-          <h2 className="text-xl font-semibold text-foreground mb-6">
-            Conversas ({filteredConversations.length})
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-foreground">
+              Conversas ({filteredConversations.length})
+            </h2>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
           {paginatedConversations.length === 0 ? (
             <div className="text-center py-12">
@@ -290,14 +269,7 @@ const Dashboard = () => {
                       onClick={() => setSelectedConversation(conv)}
                     >
                       <div className="flex items-center justify-between mb-4">
-                        <span className="text-sm font-medium text-muted-foreground">#{conv.id}</span>
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          conv.status === 'Ativo' ? 'bg-green-500/20 text-green-700 dark:text-green-400' : 
-                          conv.status === 'Normal' ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400' :
-                          'bg-gray-500/20 text-gray-700 dark:text-gray-400'
-                        }`}>
-                          {conv.status}
-                        </span>
+                        <span className="text-sm font-medium text-accent">#{conv.id}</span>
                       </div>
                       <h3 className="font-semibold text-foreground mb-2">{conv.clientName}</h3>
                       {session.role === "admin" && (
@@ -307,15 +279,11 @@ const Dashboard = () => {
                       <div className="space-y-1 text-xs text-muted-foreground">
                         <div className="flex justify-between">
                           <span>Mensagens:</span>
-                          <span className="font-medium">{conv.messages}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Satisfação:</span>
-                          <span className="font-medium">{conv.satisfaction}%</span>
+                          <span className="font-medium text-foreground">{conv.messages}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Última:</span>
-                          <span className="font-medium">{conv.lastInteraction}</span>
+                          <span className="font-medium text-foreground">{conv.lastInteraction}</span>
                         </div>
                       </div>
                     </Card>
@@ -332,7 +300,7 @@ const Dashboard = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <span className="text-sm font-medium text-muted-foreground">#{conv.id}</span>
+                            <span className="text-sm font-medium text-accent">#{conv.id}</span>
                             <h3 className="font-semibold text-foreground">{conv.clientName}</h3>
                             {session.role === "admin" && (
                               <span className="text-sm text-muted-foreground">- {conv.empresa}</span>
@@ -341,17 +309,9 @@ const Dashboard = () => {
                           <p className="text-sm text-muted-foreground mb-3">{conv.preview}</p>
                           <div className="flex gap-6 text-sm text-muted-foreground">
                             <span>Mensagens: <strong className="text-foreground">{conv.messages}</strong></span>
-                            <span>Satisfação: <strong className="text-foreground">{conv.satisfaction}%</strong></span>
                             <span>Última: <strong className="text-foreground">{conv.lastInteraction}</strong></span>
                           </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
-                          conv.status === 'Ativo' ? 'bg-green-500/20 text-green-700 dark:text-green-400' : 
-                          conv.status === 'Normal' ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400' :
-                          'bg-gray-500/20 text-gray-700 dark:text-gray-400'
-                        }`}>
-                          {conv.status}
-                        </span>
                       </div>
                     </Card>
                   ))}
@@ -396,50 +356,42 @@ const Dashboard = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="font-semibold text-foreground">Cliente</p>
-                  <p>{selectedConversation?.clientName}</p>
+                  <p className="text-muted-foreground">{selectedConversation?.clientName}</p>
                 </div>
                 {session.role === "admin" && (
                   <div>
                     <p className="font-semibold text-foreground">Empresa</p>
-                    <p>{selectedConversation?.empresa}</p>
+                    <p className="text-muted-foreground">{selectedConversation?.empresa}</p>
                   </div>
                 )}
                 <div>
-                  <p className="font-semibold text-foreground">Status</p>
-                  <p>{selectedConversation?.status}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">Satisfação</p>
-                  <p>{selectedConversation?.satisfaction}%</p>
-                </div>
-                <div>
                   <p className="font-semibold text-foreground">Total de Mensagens</p>
-                  <p>{selectedConversation?.messages}</p>
+                  <p className="text-muted-foreground">{selectedConversation?.messages}</p>
                 </div>
                 <div>
                   <p className="font-semibold text-foreground">Última Interação</p>
-                  <p>{selectedConversation?.lastInteraction}</p>
+                  <p className="text-muted-foreground">{selectedConversation?.lastInteraction}</p>
                 </div>
               </div>
 
               <div className="pt-4">
                 <p className="font-semibold text-foreground mb-3">Histórico da Conversa</p>
                 <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
-                  <div className="bg-background p-3 rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Cliente - 10:30</p>
-                    <p className="text-sm">{selectedConversation?.preview}</p>
+                  <div className="bg-gradient-to-r from-blue-500/10 to-blue-600/10 border-l-4 border-blue-500 p-3 rounded-lg">
+                    <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">Cliente - 10:30</p>
+                    <p className="text-sm text-foreground">{selectedConversation?.preview}</p>
                   </div>
-                  <div className="bg-accent/10 p-3 rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Bot - 10:31</p>
-                    <p className="text-sm">Olá! Como posso ajudá-lo hoje?</p>
+                  <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 border-l-4 border-purple-500 p-3 rounded-lg">
+                    <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-1">Bot - 10:31</p>
+                    <p className="text-sm text-foreground">Olá! Como posso ajudá-lo hoje?</p>
                   </div>
-                  <div className="bg-background p-3 rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Cliente - 10:32</p>
-                    <p className="text-sm">Gostaria de fazer uma reserva para o próximo fim de semana.</p>
+                  <div className="bg-gradient-to-r from-blue-500/10 to-blue-600/10 border-l-4 border-blue-500 p-3 rounded-lg">
+                    <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">Cliente - 10:32</p>
+                    <p className="text-sm text-foreground">Gostaria de fazer uma reserva para o próximo fim de semana.</p>
                   </div>
-                  <div className="bg-accent/10 p-3 rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Bot - 10:32</p>
-                    <p className="text-sm">Perfeito! Vou ajudá-lo com isso. Para quantas pessoas seria a reserva?</p>
+                  <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 border-l-4 border-purple-500 p-3 rounded-lg">
+                    <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-1">Bot - 10:32</p>
+                    <p className="text-sm text-foreground">Perfeito! Vou ajudá-lo com isso. Para quantas pessoas seria a reserva?</p>
                   </div>
                 </div>
               </div>
