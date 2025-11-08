@@ -61,16 +61,17 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">Email</label>
+            <label className="text-sm font-medium text-foreground mb-2 block">Usuário</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                type="email"
-                placeholder="seu@email.com"
+                type="text"
+                placeholder="admin, techsolutions ou joao.silva"
                 value={credentials.email}
                 onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                 required
                 className="pl-10 bg-background"
+                autoComplete="username"
               />
             </div>
           </div>
@@ -94,7 +95,14 @@ const Login = () => {
             Entrar no Dashboard
           </Button>
 
-          <div className="text-center">
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+            <p className="font-semibold mb-2">Credenciais de teste:</p>
+            <p>👨‍💼 Admin: <code className="text-accent">admin / admin123</code></p>
+            <p>🏢 Empresa: <code className="text-accent">techsolutions / tech123</code></p>
+            <p>👤 Cliente: <code className="text-accent">joao.silva / joao123</code></p>
+          </div>
+
+          <div className="text-center mt-4">
             <a href="/" className="text-sm text-accent hover:underline">
               Voltar para o site
             </a>
