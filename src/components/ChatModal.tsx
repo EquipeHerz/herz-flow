@@ -1,76 +1,107 @@
+/**
+ * ChatModal Component
+ * 
+ * Modal de chat interativo com a assistente virtual Bruna.
+ * Exibe mensagens em tempo real, indicador de digitação e campo de input.
+ * Utiliza os componentes ChatMessage e TypingIndicator para melhor organização.
+ * 
+ * @component
+ * @example
+ * <ChatModal isOpen={isOpen} onClose={handleClose} />
+ */
+
 import { useState } from "react";
 import { X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface Message {
-  id: string;
-  text: string;
-  sender: "user" | "bot";
-  timestamp: Date;
-}
+import { ChatMessage, Message } from "./chat/ChatMessage";
+import { TypingIndicator } from "./chat/TypingIndicator";
 
 interface ChatModalProps {
+  /** Se o modal está visível */
   isOpen: boolean;
+  /** Callback para fechar o modal */
   onClose: () => void;
 }
 
 const ChatModal = ({ isOpen, onClose }: ChatModalProps) => {
+  /**
+   * Lista de mensagens do chat
+   * Inicializa com mensagem de boas-vindas da Bruna
+   */
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "Olá! Sou a Bruna, assistente virtual do Grupo Herz. Como posso ajudar você hoje?",
-      sender: "bot",
+      text: "Olá! Eu sou a Bruna, assistente virtual do Grupo Herz. Como posso ajudá-lo hoje?",
+      isBot: true,
       timestamp: new Date(),
     },
   ]);
+  
+  /** Texto atual do campo de input */
   const [inputMessage, setInputMessage] = useState("");
+  
+  /** Indica se o bot está "digitando" (para mostrar o indicador) */
   const [isTyping, setIsTyping] = useState(false);
 
+  /**
+   * Manipula o envio de uma nova mensagem
+   * Adiciona mensagem do usuário, mostra indicador de digitação
+   * e simula resposta do bot após delay
+   */
   const handleSendMessage = () => {
+    // Ignora se a mensagem estiver vazia
     if (!inputMessage.trim()) return;
 
+    // Cria mensagem do usuário
     const userMessage: Message = {
       id: Date.now().toString(),
       text: inputMessage,
-      sender: "user",
+      isBot: false,
       timestamp: new Date(),
     };
 
+    // Adiciona mensagem do usuário ao chat
     setMessages((prev) => [...prev, userMessage]);
     setInputMessage("");
 
-    // Simulated bot response with typing indicator
+    // Simula resposta do bot com indicador de digitação
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: "Obrigada pela sua mensagem! Nossa equipe irá responder em breve. Como posso ajudar com mais alguma coisa?",
-        sender: "bot",
+        isBot: true,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, botMessage]);
-    }, 1500);
+    }, 1500); // Delay de 1.5s para simular digitação
   };
 
+  // Não renderiza nada se o modal estiver fechado
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-end p-6">
       <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-md h-[600px] flex flex-col overflow-hidden">
-        {/* Header */}
+        {/* Cabeçalho do chat com avatar e nome da assistente */}
         <div className="bg-gradient-to-r from-primary to-accent p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* Avatar da Bruna */}
             <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center text-primary-foreground font-bold">
               B
             </div>
+            
+            {/* Nome e cargo */}
             <div>
               <h3 className="font-semibold text-primary-foreground">Bruna</h3>
               <p className="text-xs text-primary-foreground/80">Assistente Virtual</p>
             </div>
           </div>
+          
+          {/* Botão de fechar */}
           <Button
             variant="ghost"
             size="icon"
@@ -81,52 +112,23 @@ const ChatModal = ({ isOpen, onClose }: ChatModalProps) => {
           </Button>
         </div>
 
-        {/* Messages */}
+        {/* Área de mensagens com scroll */}
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
+            {/* Renderiza todas as mensagens */}
             {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                    message.sender === "user"
-                      ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  }`}
-                >
-                  <p className="text-sm">{message.text}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      message.sender === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
-                    }`}
-                  >
-                    {message.timestamp.toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              </div>
+              <ChatMessage key={message.id} message={message} />
             ))}
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-muted text-foreground">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
-                </div>
-              </div>
-            )}
+            
+            {/* Indicador de digitação (exibido enquanto o bot está "digitando") */}
+            {isTyping && <TypingIndicator />}
           </div>
         </ScrollArea>
 
-        {/* Input */}
+        {/* Área de input para enviar mensagens */}
         <div className="p-4 border-t border-border">
           <div className="flex gap-2">
+            {/* Campo de texto */}
             <Input
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
@@ -134,7 +136,13 @@ const ChatModal = ({ isOpen, onClose }: ChatModalProps) => {
               placeholder="Digite sua mensagem..."
               className="flex-1"
             />
-            <Button onClick={handleSendMessage} size="icon" className="bg-accent hover:bg-accent/90">
+            
+            {/* Botão de enviar */}
+            <Button 
+              onClick={handleSendMessage} 
+              size="icon" 
+              className="bg-accent hover:bg-accent/90"
+            >
               <Send className="h-4 w-4" />
             </Button>
           </div>
