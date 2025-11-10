@@ -52,7 +52,7 @@ const MapComponent = () => {
   return (
     <div 
       ref={mapRef} 
-      className="w-full h-[400px] rounded-2xl shadow-lg border border-border/50 overflow-hidden"
+      className="w-full h-[400px] rounded-2xl shadow-lg border border-border/50 overflow-hidden relative z-0"
     />
   );
 };
