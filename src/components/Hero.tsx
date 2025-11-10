@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AIAnimations from "./AIAnimations";
 
@@ -31,9 +31,17 @@ const Hero = () => {
               size="lg" 
               variant="outline"
               className="border-primary hover:bg-primary hover:text-primary-foreground"
-              onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+              asChild
             >
-              Entre em Contato
+              <a 
+                href="https://wa.me/5511999999999"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
+                <MessageCircle className="h-5 w-5" />
+                Converse com a Júlia
+              </a>
             </Button>
           </div>
         </div>

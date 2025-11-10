@@ -26,6 +26,7 @@ const ChatModal = ({ isOpen, onClose }: ChatModalProps) => {
     },
   ]);
   const [inputMessage, setInputMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
   const handleSendMessage = () => {
     if (!inputMessage.trim()) return;
@@ -40,8 +41,10 @@ const ChatModal = ({ isOpen, onClose }: ChatModalProps) => {
     setMessages((prev) => [...prev, userMessage]);
     setInputMessage("");
 
-    // Simulated bot response
+    // Simulated bot response with typing indicator
+    setIsTyping(true);
     setTimeout(() => {
+      setIsTyping(false);
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: "Obrigada pela sua mensagem! Nossa equipe irá responder em breve. Como posso ajudar com mais alguma coisa?",
@@ -49,7 +52,7 @@ const ChatModal = ({ isOpen, onClose }: ChatModalProps) => {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, botMessage]);
-    }, 1000);
+    }, 1500);
   };
 
   if (!isOpen) return null;
@@ -107,6 +110,17 @@ const ChatModal = ({ isOpen, onClose }: ChatModalProps) => {
                 </div>
               </div>
             ))}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-muted text-foreground">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
