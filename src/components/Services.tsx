@@ -20,7 +20,7 @@ const Services = () => {
     {
       icon: Bot,
       title: "Chatbots Inteligentes",
-      description: "Sistemas de Inteligência Artificial para atendimento ao cliente no setor de turismo. Automação de comunicação, suporte personalizado e experiências interativas disponíveis 24/7.",
+      description: "Sistemas de Inteligência Artificial para atendimento ao cliente. Automação de comunicação, suporte personalizado e experiências interativas disponíveis 24/7.",
       features: [
         "Atendimento automatizado 24/7",
         "Respostas personalizadas",

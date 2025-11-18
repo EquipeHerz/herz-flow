@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type WheelEvent as ReactWheelEvent } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
   Dialog,
@@ -22,19 +22,47 @@ export function ImageGalleryModal({
   onClose 
 }: ImageGalleryModalProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<HTMLDivElement[]>([]);
+  const withBase = (p: string) => `${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}${p.startsWith('/') ? p : `/${p}`}`;
+
+  useEffect(() => {
+    setCurrentIndex(initialIndex);
+    const el = itemRefs.current[initialIndex];
+    el?.scrollIntoView({ behavior: "auto", inline: "center" });
+  }, [initialIndex, isOpen]);
+
+  const onWheelHorizontal = (e: ReactWheelEvent<HTMLDivElement>) => {
+    if (!trackRef.current) return;
+    e.preventDefault();
+    trackRef.current.scrollLeft += e.deltaY;
+  };
+
+  const updateIndexOnScroll = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (idx !== currentIndex) setCurrentIndex(Math.min(Math.max(idx, 0), images.length - 1));
+  };
 
   const nextImage = () => {
-    setCurrentIndex((prev) => (prev + 1) % images.length);
+    const next = Math.min(currentIndex + 1, images.length - 1);
+    itemRefs.current[next]?.scrollIntoView({ behavior: "smooth", inline: "center" });
+    setCurrentIndex(next);
   };
 
   const previousImage = () => {
-    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+    const prev = Math.max(currentIndex - 1, 0);
+    itemRefs.current[prev]?.scrollIntoView({ behavior: "smooth", inline: "center" });
+    setCurrentIndex(prev);
   };
+
+  const handleImageError = (_img: HTMLImageElement) => {};
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl p-0 bg-black/95 border-none">
-        <div className="relative w-full h-[80vh]">
+      <DialogContent className="sm:max-w-[90vw] lg:max-w-5xl p-0 bg-popover text-popover-foreground rounded-2xl shadow-2xl border border-border overflow-hidden">
+        <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden px-4 md:px-6 py-5 md:py-6">
           <Button
             variant="ghost"
             size="icon"
@@ -44,11 +72,27 @@ export function ImageGalleryModal({
             <X className="h-6 w-6" />
           </Button>
 
-          <img
-            src={images[currentIndex]}
-            alt={`${clientName} ${currentIndex + 1}`}
-            className="w-full h-full object-contain"
-          />
+          <div
+            ref={trackRef}
+            className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth overscroll-x-contain touch-pan-x"
+            onWheel={onWheelHorizontal}
+            onScroll={updateIndexOnScroll}
+          >
+            {images.map((src, idx) => (
+              <div
+                key={idx}
+                ref={(el) => { if (el) itemRefs.current[idx] = el; }}
+                className="flex-shrink-0 w-full h-full snap-start flex items-center justify-center"
+              >
+                <img
+                  src={withBase(src)}
+                  alt={`${clientName} ${idx + 1}`}
+                  className="max-h-full max-w-full object-contain"
+                  onError={(e) => handleImageError(e.currentTarget)}
+                />
+              </div>
+            ))}
+          </div>
 
           {images.length > 1 && (
             <>

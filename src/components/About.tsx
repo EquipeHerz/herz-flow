@@ -10,7 +10,7 @@ const About = () => {
     {
       icon: Users,
       title: "Equipe Especializada",
-      description: "Pedro e Junior, fundadores visionários"
+      description: "Profissionais qualificados e dispostos a entregar o melhor serviço"
     },
     {
       icon: Globe,
@@ -19,29 +19,40 @@ const About = () => {
     },
     {
       icon: Target,
-      title: "Foco em Turismo",
-      description: "Soluções inteligentes para o setor"
+      title: "Diversos Segmentos",
+      description: "Soluções inteligentes para corporativo, educação, saúde e mais"
     }
   ];
 
   return (
     <section className="py-24 bg-background relative">
       <div className="container mx-auto px-6">
-        <div className="max-w-4xl mx-auto text-center space-y-6 mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground">
-            Sobre a Herz
-          </h2>
-          <p className="text-lg text-foreground/70 leading-relaxed">
-            A Herz é uma empresa especializada em tecnologia e inovação, sediada em Nova Petrópolis, 
-            na encantadora Serra Gaúcha (RS). Fundada em 2024 por Pedro e Junior, nascemos com a visão 
-            de transformar o atendimento ao público por meio de soluções inteligentes e personalizadas.
-          </p>
-          <p className="text-lg text-foreground/70 leading-relaxed">
-            Nosso foco está em desenvolver sistemas de Inteligência Artificial para Agentes de IA, 
-            impulsionando o setor de turismo com automação de comunicação, suporte personalizado e 
-            experiências interativas. Na Herz, acreditamos que tecnologia é feita para pessoas – 
-            e, por isso, cada solução nasce da busca constante por excelência, proximidade e inovação.
-          </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center mb-16 max-w-6xl mx-auto">
+          <div className="relative order-2 md:order-1">
+            <img
+              src="/images/sobre.jpg"
+              alt="Equipe Herz colaborando em soluções de IA"
+              className="w-full h-[380px] md:h-[420px] rounded-2xl object-cover border border-border shadow-xl"
+              loading="lazy"
+            />
+          </div>
+          <div className="space-y-6 order-1 md:order-2">
+            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+              Sobre a Herz
+            </h2>
+            <p className="text-lg text-foreground/70 leading-relaxed" style={{ textAlign: 'justify' }}>
+              A Herz é uma empresa especializada em tecnologia e inovação, sediada em Nova Petrópolis,
+              na encantadora Serra Gaúcha (RS). Fundada em 2024 por Pedro e Junior, nascemos com a visão
+              de transformar o atendimento ao público por meio de soluções inteligentes e personalizadas.
+            </p>
+            <p className="text-lg text-foreground/70 leading-relaxed" style={{ textAlign: 'justify' }}>
+              Nosso foco está em desenvolver sistemas de Inteligência Artificial para Agentes de IA,
+              impulsionando diversos setores como corporativo, educação, saúde, varejo e turismo com
+              automação de comunicação, suporte personalizado e experiências interativas. Na Herz, acreditamos
+              que tecnologia é feita para pessoas – e, por isso, cada solução nasce da busca constante por
+              excelência, proximidade e inovação.
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">

@@ -1,16 +1,16 @@
 import { Link } from "react-router-dom";
 import { Facebook, Instagram, Linkedin, Mail } from "lucide-react";
-import logoLight from "@/assets/logo-light.png";
+import Logo from "./Logo";
 
 const Footer = () => {
   return (
     <footer className="bg-primary text-primary-foreground py-12">
       <div className="container mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <div className="space-y-4">
-            <img src={logoLight} alt="Grupo Herz" className="h-12 w-auto" />
+          <div className="space-y-5">
+            <Logo size="lg" className="text-primary-foreground" />
             <p className="text-sm opacity-80">
-              Tecnologia e Inovação para o Futuro do Turismo
+              Automação de IA para Empresas
             </p>
           </div>
 

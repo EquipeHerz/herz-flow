@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field } from "@/styles/components/Field";
 import { useToast } from "@/hooks/use-toast";
-import logoLight from "@/assets/logo-light.png";
+import Logo from "@/components/Logo";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ const Login = () => {
       
       <div className="w-full max-w-md p-8 m-4 bg-card rounded-2xl shadow-2xl relative z-10 border border-border/50">
         <div className="text-center mb-8">
-          <img src={logoLight} alt="Grupo Herz" className="h-16 mx-auto mb-4" />
+          <Logo size="xl" className="mx-auto mb-4 text-accent" />
           <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard Herz</h1>
           <p className="text-foreground/70">Acesse suas análises e métricas</p>
         </div>
@@ -62,33 +63,32 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">Usuário</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Field>
+              <Mail className="field-icon h-5 w-5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="admin, techsolutions ou joao.silva"
                 value={credentials.email}
                 onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                 required
-                className="pl-10 bg-background"
                 autoComplete="username"
               />
-            </div>
+            </Field>
           </div>
 
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">Senha</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Field>
+              <Lock className="field-icon h-5 w-5 text-muted-foreground" />
               <Input
                 type="password"
                 placeholder="••••••••"
                 value={credentials.password}
                 onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                 required
-                className="pl-10 bg-background"
+                autoComplete="current-password"
               />
-            </div>
+            </Field>
           </div>
 
           <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-background">

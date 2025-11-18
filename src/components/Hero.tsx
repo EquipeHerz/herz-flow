@@ -11,7 +11,7 @@ const Hero = () => {
       <div className="container mx-auto px-6 py-32 relative z-10">
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <h1 className="text-5xl md:text-7xl font-bold text-foreground animate-fade-in-up leading-tight">
-            Tecnologia e Inovação para o Futuro do Turismo
+            <span className="text-accent">Soluções inteligentes</span>, para o seu negócio decolar.
           </h1>
           
           <p className="text-xl md:text-2xl text-foreground/70 animate-fade-in-up max-w-2xl mx-auto" style={{ animationDelay: "0.2s" }}>
@@ -34,13 +34,12 @@ const Hero = () => {
               asChild
             >
               <a 
-                href="https://wa.me/5511999999999"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="#contact"
                 className="flex items-center gap-2"
+                onClick={(e) => { e.preventDefault(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }); }}
               >
                 <MessageCircle className="h-5 w-5" />
-                Converse com a Júlia
+                Converse conosco
               </a>
             </Button>
           </div>

@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
-import logoDark from "@/assets/logo-dark.jpg";
-import logoLight from "@/assets/logo-light.png";
+import Logo from "./Logo";
 
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+  const toggleBtnRef = useRef<HTMLButtonElement | null>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -18,6 +19,29 @@ const Navigation = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const onPointerDown = (e: Event) => {
+      const target = e.target as Node;
+      const menuEl = mobileMenuRef.current;
+      const btnEl = toggleBtnRef.current;
+      const clickedInsideMenu = !!(menuEl && menuEl.contains(target));
+      const clickedToggle = !!(btnEl && btnEl.contains(target));
+      if (!clickedInsideMenu && !clickedToggle) setIsMobileMenuOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMobileMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown, { passive: true });
+    document.addEventListener("touchstart", onPointerDown, { passive: true });
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown as EventListener);
+      document.removeEventListener("touchstart", onPointerDown as EventListener);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isMobileMenuOpen]);
 
   const navLinks = [
     { name: "Início", href: "/" },
@@ -32,14 +56,10 @@ const Navigation = () => {
         isScrolled ? "bg-background/95 backdrop-blur-md shadow-lg" : "bg-transparent"
       }`}
     >
-      <div className="container mx-auto px-6 py-4">
+      <div className="container mx-auto px-6 py-6">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-3 group">
-            <img 
-              src={logoLight} 
-              alt="Grupo Herz" 
-              className="h-12 w-auto transition-transform duration-300 group-hover:scale-105"
-            />
+            <Logo size="lg" className="transition-transform duration-300 group-hover:scale-105 text-accent" />
           </Link>
 
           {/* Desktop Navigation */}
@@ -63,8 +83,11 @@ const Navigation = () => {
 
           {/* Mobile Menu Button */}
           <button
+            ref={toggleBtnRef}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="md:hidden p-2 text-foreground"
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-menu"
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -72,13 +95,20 @@ const Navigation = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 space-y-4 animate-fade-in-up">
+          <div
+            id="mobile-menu"
+            ref={mobileMenuRef}
+            className="md:hidden mt-4 pb-4 space-y-4 animate-fade-in-up"
+            role="menu"
+            aria-label="Menu móvel"
+          >
             {navLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block text-foreground/80 hover:text-accent transition-colors duration-300 font-medium"
+                role="menuitem"
               >
                 {link.name}
               </a>

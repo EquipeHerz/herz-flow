@@ -40,7 +40,7 @@ export const ServiceCard = ({ icon: Icon, title, description, features, color }:
   };
 
   return (
-    <div className="bg-card rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden group border border-border/50">
+    <div className="bg-card rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden group border border-border/50 flex flex-col h-full relative">
       {/* Cabeçalho do cartão com gradiente e ícone */}
       <div className={`bg-gradient-to-br ${color} p-8 relative overflow-hidden`}>
         {/* Elemento decorativo de fundo com animação ao hover */}
@@ -56,7 +56,8 @@ export const ServiceCard = ({ icon: Icon, title, description, features, color }:
       </div>
       
       {/* Corpo do cartão com descrição e recursos */}
-      <div className="p-8 space-y-6">
+      {/* Reservamos espaço inferior para o botão fixo (≈ 80px) */}
+      <div className="p-8 pb-20 space-y-6 flex flex-col flex-1">
         {/* Descrição do serviço */}
         <p className="text-foreground/70 leading-relaxed">
           {description}
@@ -72,11 +73,12 @@ export const ServiceCard = ({ icon: Icon, title, description, features, color }:
           ))}
         </ul>
 
-        {/* Botão de ação para solicitar demonstração */}
-        <Button 
-          className="w-full bg-accent hover:bg-accent/90 text-background"
-          onClick={handleScrollToContact}
-        >
+        {/* Espaço do botão removido aqui; botão fixo está posicionado absoluto no rodapé */}
+      </div>
+
+      {/* Botão de ação fixo 15px do rodapé do card */}
+      <div className="absolute left-[15px] right-[15px] bottom-[15px]">
+        <Button size="lg" variant="default" className="w-full" onClick={handleScrollToContact}>
           Solicitar Demonstração
         </Button>
       </div>
