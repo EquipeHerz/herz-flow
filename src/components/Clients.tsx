@@ -1,19 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { Building2, Phone, Globe, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { ImageGalleryModal } from "./ImageGalleryModal";
 
 const Clients = () => {
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<{ images: string[]; name: string; initialIndex: number } | null>(null);
+  const [selectedClient, setSelectedClient] = useState<{ images: string[]; name: string; description: string; initialIndex: number } | null>(null);
 
   const clients = [
     {
@@ -117,118 +109,29 @@ const Clients = () => {
         <div className="relative max-w-6xl mx-auto">
           <div ref={listRef} className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible scroll-smooth snap-x snap-mandatory pb-2 -mx-6 md:mx-0 px-6 md:px-0">
             {clients.map((client, index) => (
-              <Dialog key={index}>
-                <DialogTrigger asChild>
-                  <div className={`bg-card rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer group border border-border/50 relative min-w-[280px] md:min-w-0 snap-start ${index === 0 ? 'ml-5 md:ml-0' : ''}`}>
-                  <div className="h-48 bg-gradient-to-br from-accent/20 to-primary/10 relative overflow-hidden">
-                    <img 
-                      src={withBase(client.images[0])} 
-                      alt={client.name}
-                      className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                    <Building2 className="absolute bottom-4 left-4 h-8 w-8 text-accent" />
-                  </div>
-                  
-                  {/* Reservamos espaço inferior para o botão fixo (≈ 80px) */}
-                  <div className="p-6 pb-20 space-y-4">
-                    <h3 className="text-xl font-bold text-foreground group-hover:text-accent transition-colors">
-                      {client.name}
-                    </h3>
-                    
-                    <div className="space-y-2 text-sm text-foreground/70">
-                      <div className="flex items-start">
-                        <Globe className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0 text-accent" />
-                        <a
-                          href={websiteHref(client.address)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline underline-offset-2 hover:text-accent"
-                          aria-label={`Abrir website de ${client.name}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {displayDomain(client.address)}
-                        </a>
-                      </div>
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-2 flex-shrink-0 text-accent" />
-                        <span>{client.phone}</span>
-                      </div>
-                    </div>
-
-                    {/* Botão movido para posição fixa no rodapé */}
-                  </div>
-                  {/* Botão fixo 15px do rodapé do card */}
-                  <div className="absolute left-[15px] right-[15px] bottom-[15px]">
-                    <Button 
-                      size="lg"
-                      variant="default"
-                      className="w-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(client.whatsapp, '_blank');
-                      }}
-                    >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      WhatsApp
+              <div
+                key={index}
+                className={`group relative block rounded-2xl overflow-hidden shadow-lg transition-all duration-500 border border-border/50 min-w-[280px] md:min-w-0 snap-start ${index === 0 ? 'ml-5 md:ml-0' : ''} cursor-pointer`}
+                onClick={() => { setSelectedClient({ images: client.images, name: client.name, description: client.description, initialIndex: 0 }); setGalleryOpen(true); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedClient({ images: client.images, name: client.name, description: client.description, initialIndex: 0 }); setGalleryOpen(true); } }}
+                role="button"
+                tabIndex={0}
+                aria-label={`Abrir galeria de ${client.name}`}
+                style={{ boxShadow: "0 0 40px -15px hsl(var(--accent) / 0.25)" }}
+              >
+                <div className="absolute inset-0 bg-cover bg-center transition-transform duration-500 ease-in-out group-hover:scale-105" style={{ backgroundImage: `url(${withBase(client.images[0])})` }} />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(to top, hsl(var(--background) / 0.85), transparent 55%)" }} />
+                <div className="relative flex flex-col justify-end h-[24.64rem] p-6 text-white">
+                  <h3 className="text-2xl font-bold tracking-tight drop-shadow-md">{client.name}</h3>
+                  <div className="mt-5 flex items-center justify-between bg-[hsl(var(--accent)/0.2)] backdrop-blur-md border border-[hsl(var(--accent)/0.3)] rounded-lg px-4 py-3 transition-all duration-300 group-hover:bg-[hsl(var(--accent)/0.35)] group-hover:border-[hsl(var(--accent)/0.45)]">
+                    <span className="text-sm font-semibold tracking-wide">Conheça melhor</span>
+                    <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-transparent" onClick={() => { setSelectedClient({ images: client.images, name: client.name, description: client.description, initialIndex: 0 }); setGalleryOpen(true); }} aria-label={`Abrir galeria de ${client.name}`}>
+                      <ArrowRight className="h-4 w-4 transform transition-transform duration-300 group-hover:translate-x-1" />
                     </Button>
                   </div>
                 </div>
-              </DialogTrigger>
-              
-              <DialogContent className="max-w-[90vw] md:max-w-2xl p-0 bg-card rounded-2xl shadow-xl border border-border">
-                <div className="p-5 md:p-6 max-h-[75vh] modal-scroll space-y-6">
-                  <DialogHeader>
-                    <DialogTitle className="text-2xl">{client.name}</DialogTitle>
-                  </DialogHeader>
-
-                  <p className="text-base text-foreground/90">{client.description}</p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="flex items-start">
-                      <Globe className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0 text-accent" />
-                      <a
-                        href={websiteHref(client.address)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline underline-offset-4 hover:text-accent"
-                      >
-                        {displayDomain(client.address)}
-                      </a>
-                    </div>
-                    <div className="flex items-center">
-                      <Phone className="h-5 w-5 mr-2 flex-shrink-0 text-accent" />
-                      <span>{client.phone}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory">
-                    {client.images.map((img, idx) => (
-                      <div key={idx} className="w-40 h-28 flex items-center justify-center rounded-lg border border-border/50 bg-card/30 flex-shrink-0 snap-start">
-                        <img
-                          src={withBase(img)}
-                          alt={`${client.name} ${idx + 1}`}
-                          className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => {
-                            setSelectedClient({ images: client.images, name: client.name, initialIndex: idx });
-                            setGalleryOpen(true);
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  <Button 
-                    className="w-full bg-accent hover:bg-accent/90 text-background"
-                    onClick={() => window.open(client.whatsapp, '_blank')}
-                  >
-                    <MessageCircle className="mr-2 h-4 w-4" />
-                    Falar via WhatsApp
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          ))}
+              </div>
+            ))}
           </div>
           {/* Gradiente e setas com desaparecimento nas extremidades (mobile) */}
           {canLeft && (
@@ -252,6 +155,7 @@ const Clients = () => {
           <ImageGalleryModal
             images={selectedClient.images}
             clientName={selectedClient.name}
+            description={selectedClient.description}
             initialIndex={selectedClient.initialIndex}
             isOpen={galleryOpen}
             onClose={() => setGalleryOpen(false)}

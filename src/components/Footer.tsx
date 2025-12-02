@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Facebook, Instagram, Linkedin, Mail } from "lucide-react";
+import { Instagram } from "lucide-react";
 import Logo from "./Logo";
 
 const Footer = () => {
@@ -36,30 +36,35 @@ const Footer = () => {
 
           <div>
             <h3 className="font-semibold mb-4">Contato</h3>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-4 text-sm">
               <li className="opacity-80">Nova Petrópolis, RS</li>
-              <li className="opacity-80">+55 54 3281-0000</li>
-              <li className="opacity-80">contato@grupoherz.com.br</li>
+              <li className="space-y-1">
+                <p className="text-primary-foreground font-bold text-base md:text-lg">Junior</p>
+                <p className="opacity-80">junior.rodeghiero@grupoherz.com.br</p>
+                <p className="opacity-80">54 99969 9949</p>
+              </li>
+              <li className="space-y-1">
+                <p className="text-primary-foreground font-bold text-base md:text-lg">Pedro</p>
+                <p className="opacity-80">pedro.cordeiro@grupoherz.com.br</p>
+                <p className="opacity-80">54 99883-3682</p>
+              </li>
             </ul>
-            <div className="flex space-x-4 mt-4">
-              <a href="#" className="opacity-80 hover:opacity-100 transition-opacity">
-                <Facebook size={20} />
-              </a>
-              <a href="#" className="opacity-80 hover:opacity-100 transition-opacity">
+            <div className="flex mt-4">
+              <a
+                href="https://www.instagram.com/grupo.herz?igsh=YjAyZThxNjMzbWFi"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram do Grupo Herz"
+                className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary-foreground/10 text-primary-foreground hover:bg-accent hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-transform duration-300 hover:scale-105"
+              >
                 <Instagram size={20} />
-              </a>
-              <a href="#" className="opacity-80 hover:opacity-100 transition-opacity">
-                <Linkedin size={20} />
-              </a>
-              <a href="#" className="opacity-80 hover:opacity-100 transition-opacity">
-                <Mail size={20} />
               </a>
             </div>
           </div>
         </div>
 
         <div className="border-t border-primary-foreground/20 pt-8 text-center text-sm opacity-80">
-          <p>&copy; 2024 Grupo Herz. Todos os direitos reservados.</p>
+          <p>&copy; 2025 Grupo Herz. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>

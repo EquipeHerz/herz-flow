@@ -15,7 +15,7 @@ const Logo: React.FC<LogoProps> = ({ className = '', size = 'md' }) => {
 
   return (
     <img 
-      src="/src/assets/logo-light.png"
+      src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/logo_light.ico`}
       alt="Grupo Herz"
       className={`w-auto ${sizeClasses[size]} ${className} object-contain dark:brightness-110 dark:contrast-110`}
     />

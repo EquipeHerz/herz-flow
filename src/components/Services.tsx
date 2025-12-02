@@ -32,11 +32,11 @@ const Services = () => {
     {
       icon: Monitor,
       title: "Totens de Autoatendimento",
-      description: "Totens de última geração que otimizam operações, oferecem praticidade aos usuários e agregam valor à gestão dos negócios com interface intuitiva e moderna.",
+      description: "Totens de última geração para experiências rápidas e intuitivas: bilheteria e venda de ingressos automatizadas, operações otimizadas e gestão simplificada, tudo com design moderno e acessível.",
       features: [
         "Interface touch intuitiva",
         "Design moderno e elegante",
-        "Múltiplas opções de pagamento",
+        "Bilheteria e venda de ingressos automatizados",
         "Gestão centralizada de conteúdo"
       ],
       color: "from-primary/20 to-primary/5"

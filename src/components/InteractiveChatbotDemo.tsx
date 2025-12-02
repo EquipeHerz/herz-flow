@@ -81,18 +81,26 @@ const InteractiveChatbotDemo = () => {
   }, []);
 
   useEffect(() => {
-    const url = 'https://platform.zaia.app/embed/chat/68980?custom=' + encodeURIComponent(JSON.stringify({ name: 'Jonas', role: 'Guia Turístico e Concierge' }));
-    (window as any).ZWidget = { AgentURL: url };
-    const s = document.createElement('script');
-    s.src = 'https://platform.zaia.app/script/widget-loader.js';
-    s.async = true;
-    s.onload = () => {
-      const fab = document.getElementById('chatbot-fab');
-      const cont = document.getElementById('chatbot-container');
-      if (zaiaAnchorRef.current && fab) zaiaAnchorRef.current.appendChild(fab);
-      if (zaiaAnchorRef.current && cont) zaiaAnchorRef.current.appendChild(cont);
-      cont?.classList.add('chatbot-container-closed');
+    (window as any).__initZaiaWidget = () => {
+      if ((window as any).__zaiaLoaded) return;
+      const url = 'https://platform.zaia.app/embed/chat/68980?custom=' + encodeURIComponent(JSON.stringify({ name: 'Jonas', role: 'Guia Turístico e Concierge' }));
+      (window as any).ZWidget = { AgentURL: url };
+      const anchor = zaiaAnchorRef.current || document.body;
+      let cont = document.getElementById('chatbot-container');
+      if (!cont) {
+        cont = document.createElement('div');
+        cont.id = 'chatbot-container';
+        anchor.appendChild(cont);
+      }
+      if (!cont.querySelector('iframe')) {
+        const iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.title = 'Chat Zaia - Jonas';
+        cont.appendChild(iframe);
+      }
+      cont.classList.add('chatbot-container-closed');
       setZaiaReady(true);
+      (window as any).__zaiaLoaded = true;
       if (!(window as any).toggleChatbot) {
         (window as any).toggleChatbot = () => {
           const c = document.getElementById('chatbot-container');
@@ -114,10 +122,12 @@ const InteractiveChatbotDemo = () => {
       };
       document.addEventListener('click', handleDocClick);
       (window as any).__zaiaCleanup = () => document.removeEventListener('click', handleDocClick);
+      if ((window as any).__zaiaRequestedOpen) {
+        (window as any).__zaiaRequestedOpen = false;
+        (window as any).toggleChatbot();
+      }
     };
-    document.body.appendChild(s);
     return () => {
-      s.remove();
       (window as any).__zaiaCleanup?.();
     };
   }, []);

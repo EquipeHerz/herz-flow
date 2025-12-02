@@ -10,7 +10,7 @@ const About = () => {
     {
       icon: Users,
       title: "Equipe Especializada",
-      description: "Profissionais qualificados e dispostos a entregar o melhor serviço"
+      description: "Suporte profissional 24 horas por dia"
     },
     {
       icon: Globe,
@@ -30,7 +30,7 @@ const About = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center mb-16 max-w-6xl mx-auto">
           <div className="relative order-2 md:order-1">
             <img
-              src="/images/sobre.jpg"
+              src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/images/sobre.jpg`}
               alt="Equipe Herz colaborando em soluções de IA"
               className="w-full h-[380px] md:h-[420px] rounded-2xl object-cover border border-border shadow-xl"
               loading="lazy"
@@ -41,16 +41,10 @@ const About = () => {
               Sobre a Herz
             </h2>
             <p className="text-lg text-foreground/70 leading-relaxed" style={{ textAlign: 'justify' }}>
-              A Herz é uma empresa especializada em tecnologia e inovação, sediada em Nova Petrópolis,
-              na encantadora Serra Gaúcha (RS). Fundada em 2024 por Pedro e Junior, nascemos com a visão
-              de transformar o atendimento ao público por meio de soluções inteligentes e personalizadas.
+              A Herz é uma empresa de tecnologia e inovação sediada em Nova Petrópolis (RS), criada em 2024 com a missão de reinventar o atendimento ao público por meio de soluções inteligentes. Desenvolvemos sistemas avançados de Inteligência Artificial para Agentes de IA, elevando a comunicação entre empresas e clientes em múltiplos segmentos.
             </p>
             <p className="text-lg text-foreground/70 leading-relaxed" style={{ textAlign: 'justify' }}>
-              Nosso foco está em desenvolver sistemas de Inteligência Artificial para Agentes de IA,
-              impulsionando diversos setores como corporativo, educação, saúde, varejo e turismo com
-              automação de comunicação, suporte personalizado e experiências interativas. Na Herz, acreditamos
-              que tecnologia é feita para pessoas – e, por isso, cada solução nasce da busca constante por
-              excelência, proximidade e inovação.
+              Atuamos nos setores corporativo, jurídico, educacional, saúde (laboratórios e clínicas), varejo, hotelaria e turismo, oferecendo automação de atendimento, suporte personalizado e experiências interativas que aproximam marcas de pessoas. Na Herz, acreditamos que tecnologia só alcança seu verdadeiro potencial quando melhora a vida real. Por isso, cada solução nasce do encontro entre excelência técnica, proximidade e inovação contínua.
             </p>
           </div>
         </div>

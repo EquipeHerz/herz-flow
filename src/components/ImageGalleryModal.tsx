@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 interface ImageGalleryModalProps {
   images: string[];
   clientName: string;
+  description: string;
   initialIndex?: number;
   isOpen: boolean;
   onClose: () => void;
@@ -17,6 +18,7 @@ interface ImageGalleryModalProps {
 export function ImageGalleryModal({ 
   images, 
   clientName, 
+  description,
   initialIndex = 0,
   isOpen,
   onClose 
@@ -61,8 +63,8 @@ export function ImageGalleryModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[90vw] lg:max-w-5xl p-0 bg-popover text-popover-foreground rounded-2xl shadow-2xl border border-border overflow-hidden">
-        <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden px-4 md:px-6 py-5 md:py-6">
+      <DialogContent aria-label={`Galeria de ${clientName}`} className="sm:max-w-[90vw] lg:max-w-5xl p-0 bg-popover text-popover-foreground rounded-2xl shadow-2xl border border-border overflow-hidden">
+        <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden px-4 md:px-6 py-5 md:py-6 flex flex-col">
           <Button
             variant="ghost"
             size="icon"
@@ -71,27 +73,33 @@ export function ImageGalleryModal({
           >
             <X className="h-6 w-6" />
           </Button>
+          <div className="sticky top-0 z-10 bg-popover/85 backdrop-blur-md border-b border-border px-1 md:px-0 py-4 space-y-2">
+            <h3 className="text-2xl font-bold" id="gallery-title">{clientName}</h3>
+            <p className="text-base leading-relaxed text-popover-foreground/90" aria-describedby="gallery-title">{description}</p>
+          </div>
 
-          <div
-            ref={trackRef}
-            className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth overscroll-x-contain touch-pan-x"
-            onWheel={onWheelHorizontal}
-            onScroll={updateIndexOnScroll}
-          >
-            {images.map((src, idx) => (
-              <div
-                key={idx}
-                ref={(el) => { if (el) itemRefs.current[idx] = el; }}
-                className="flex-shrink-0 w-full h-full snap-start flex items-center justify-center"
-              >
-                <img
-                  src={withBase(src)}
-                  alt={`${clientName} ${idx + 1}`}
-                  className="max-h-full max-w-full object-contain"
-                  onError={(e) => handleImageError(e.currentTarget)}
-                />
-              </div>
-            ))}
+          <div className="relative flex-1 min-h-0">
+            <div
+              ref={trackRef}
+              className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth overscroll-x-contain touch-pan-x"
+              onWheel={onWheelHorizontal}
+              onScroll={updateIndexOnScroll}
+            >
+              {images.map((src, idx) => (
+                <div
+                  key={idx}
+                  ref={(el) => { if (el) itemRefs.current[idx] = el; }}
+                  className="flex-shrink-0 w-full h-full snap-start flex items-center justify-center"
+                >
+                  <img
+                    src={withBase(src)}
+                    alt={`${clientName} ${idx + 1}`}
+                    className="max-h-full max-w-full object-contain"
+                    onError={(e) => handleImageError(e.currentTarget)}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           {images.length > 1 && (
@@ -101,6 +109,7 @@ export function ImageGalleryModal({
                 size="icon"
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
                 onClick={previousImage}
+                aria-label="Imagem anterior"
               >
                 <ChevronLeft className="h-8 w-8" />
               </Button>
@@ -110,6 +119,7 @@ export function ImageGalleryModal({
                 size="icon"
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
                 onClick={nextImage}
+                aria-label="Próxima imagem"
               >
                 <ChevronRight className="h-8 w-8" />
               </Button>
@@ -119,6 +129,27 @@ export function ImageGalleryModal({
               </div>
             </>
           )}
+          <div className="mt-4 h-24 w-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth">
+            <div className="flex gap-3 pr-2">
+              {images.map((src, idx) => (
+                <button
+                  key={`thumb-${idx}`}
+                  onClick={() => {
+                    itemRefs.current[idx]?.scrollIntoView({ behavior: "smooth", inline: "center" });
+                    setCurrentIndex(idx);
+                  }}
+                  className={`flex-shrink-0 w-32 h-20 rounded-md border ${idx === currentIndex ? 'border-accent' : 'border-border'} overflow-hidden`}
+                  aria-label={`Ir para imagem ${idx + 1}`}
+                >
+                  <img
+                    src={withBase(src)}
+                    alt={`${clientName} miniatura ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -34,9 +34,10 @@ const Hero = () => {
               asChild
             >
               <a 
-                href="#contact"
+                href="https://wa.me/5554999699949?text=Ol%C3%A1%2C%20gostaria%20de%20saber%20mais%20sobre%20seus%20servi%C3%A7os%21**"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-2"
-                onClick={(e) => { e.preventDefault(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }); }}
               >
                 <MessageCircle className="h-5 w-5" />
                 Converse conosco
