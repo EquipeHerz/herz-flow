@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Instagram } from "lucide-react";
+import { Instagram, Mail, MessageCircle, MapPin } from "lucide-react";
 import Logo from "./Logo";
 
 const Footer = () => {
@@ -37,16 +37,54 @@ const Footer = () => {
           <div>
             <h3 className="font-semibold mb-4">Contato</h3>
             <ul className="space-y-4 text-sm">
-              <li className="opacity-80">Nova Petrópolis, RS</li>
+              <li className="opacity-80 inline-flex items-center gap-2">
+                <MapPin size={16} />
+                <span>Nova Petrópolis, RS</span>
+              </li>
               <li className="space-y-1">
                 <p className="text-primary-foreground font-bold text-base md:text-lg">Junior</p>
-                <p className="opacity-80">junior.rodeghiero@grupoherz.com.br</p>
-                <p className="opacity-80">54 99969 9949</p>
+                <p className="opacity-80">
+                  <a
+                    href="mailto:junior.rodeghiero@grupoherz.com.br"
+                    className="inline-flex items-center gap-2 hover:opacity-100 transition-opacity"
+                    aria-label="Enviar e-mail para Junior"
+                  >
+                    <Mail size={16} />
+                    <span>junior.rodeghiero@grupoherz.com.br</span>
+                  </a>
+                </p>
+                <p className="opacity-80">
+                  <a
+                    href="https://wa.me/5554999699949"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 hover:opacity-100 transition-opacity"
+                    aria-label="Abrir WhatsApp para +55 54 99969 9949"
+                  >
+                    <MessageCircle size={16} />
+                    <span>+55 54 99969 9949</span>
+                  </a>
+                </p>
               </li>
               <li className="space-y-1">
                 <p className="text-primary-foreground font-bold text-base md:text-lg">Pedro</p>
-                <p className="opacity-80">pedro.cordeiro@grupoherz.com.br</p>
-                <p className="opacity-80">54 99883-3682</p>
+                <p className="opacity-80 inline-flex items-center gap-2">
+                  <Mail size={16} />
+                  <span>pedro.cordeiro@grupoherz.com.br</span>
+                </p>
+                
+                <p className="opacity-80">
+                  <a
+                    href="https://wa.me/5554998833682"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 hover:opacity-100 transition-opacity"
+                    aria-label="Abrir WhatsApp para +55 54 99883 3682"
+                  >
+                    <MessageCircle size={16} />
+                    <span>+55 54 99883 3682</span>
+                  </a>
+                </p>
               </li>
             </ul>
             <div className="flex mt-4">

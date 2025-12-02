@@ -55,14 +55,14 @@ export const ContactInfo = () => {
       <ContactInfoItem
         icon={Mail}
         title="Email"
-        content="contato@grupoherz.com.br"
+        content="pedro.cordeiro@grupoherz.com.br"
       />
 
       {/* Informação de Telefone */}
       <ContactInfoItem
         icon={Phone}
         title="Telefone"
-        content="+55 54 3281-0000"
+        content="+55 54 99883 3682"
       />
 
       {/* Informação de Localização */}

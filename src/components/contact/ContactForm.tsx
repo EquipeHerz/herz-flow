@@ -56,14 +56,26 @@ export const ContactForm = () => {
    */
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // Exibe notificação de sucesso
+    const to = "pedro.cordeiro@grupoherz.com.br";
+    const cc = "junior.rodeghiero@grupoherz.com.br";
+    const subject = `Contato via site - ${formData.name || "Sem nome"}`;
+    const bodyLines = [
+      `Nome: ${formData.name}`,
+      `Email: ${formData.email}`,
+      `Telefone: ${formData.phone || "(não informado)"}`,
+      "",
+      "Mensagem:",
+      formData.message
+    ];
+    const body = bodyLines.join("\n");
+    const mailtoUrl = `mailto:${to}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+
     toast({
-      title: "Mensagem enviada!",
-      description: "Entraremos em contato em breve.",
+      title: "Preparando e-mail...",
+      description: "Abrimos seu cliente de e-mail com a mensagem preenchida.",
     });
-    
-    // Reseta o formulário para o estado inicial
+
     setFormData(initialFormState);
   };
 

@@ -19,5 +19,6 @@ export const Field = styled.div`
     left: 0.75rem; /* left-3 */
     top: 50%;
     transform: translateY(-50%);
+    pointer-events: none;
   }
 `;

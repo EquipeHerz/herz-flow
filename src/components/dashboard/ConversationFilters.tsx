@@ -19,7 +19,7 @@
  * />
  */
 
-import { Search } from "lucide-react";
+import { Search, Calendar } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -77,30 +77,44 @@ export const ConversationFilters = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Campo de Busca por ID ou Nome */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por ID ou nome..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
+            className="pl-12"
+            aria-label="Buscar por ID ou nome"
+            style={{ paddingLeft: '2.5rem' }}
           />
         </div>
 
         {/* Filtro de Data Inicial */}
-        <Input
-          type="date"
-          placeholder="Data inicial"
-          value={dateStart}
-          onChange={(e) => onDateStartChange(e.target.value)}
-        />
+        <div className="relative">
+          <Calendar aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="date"
+            placeholder="Data inicial"
+            value={dateStart}
+            onChange={(e) => onDateStartChange(e.target.value)}
+            className="pl-12"
+            aria-label="Data inicial"
+            style={{ paddingLeft: '2.5rem' }}
+          />
+        </div>
 
         {/* Filtro de Data Final */}
-        <Input
-          type="date"
-          placeholder="Data final"
-          value={dateEnd}
-          onChange={(e) => onDateEndChange(e.target.value)}
-        />
+        <div className="relative">
+          <Calendar aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="date"
+            placeholder="Data final"
+            value={dateEnd}
+            onChange={(e) => onDateEndChange(e.target.value)}
+            className="pl-12"
+            aria-label="Data final"
+            style={{ paddingLeft: '2.5rem' }}
+          />
+        </div>
 
         {/* Filtro de Empresa (apenas para admin) */}
         {isAdmin && (

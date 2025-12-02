@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,11 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [credentials, setCredentials] = useState({ email: "", password: "" });
+
+  useEffect(() => {
+    const c = document.getElementById("chatbot-container");
+    if (c) c.remove();
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +69,7 @@ const Login = () => {
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">Usuário</label>
             <Field>
-              <Mail className="field-icon h-5 w-5 text-muted-foreground" />
+              <Mail aria-hidden="true" className="field-icon h-5 w-5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="admin, techsolutions ou joao.silva"
@@ -79,7 +84,7 @@ const Login = () => {
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">Senha</label>
             <Field>
-              <Lock className="field-icon h-5 w-5 text-muted-foreground" />
+              <Lock aria-hidden="true" className="field-icon h-5 w-5 text-muted-foreground" />
               <Input
                 type="password"
                 placeholder="••••••••"
