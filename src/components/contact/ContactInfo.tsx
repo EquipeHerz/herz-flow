@@ -39,7 +39,7 @@ const ContactInfoItem = ({ icon: Icon, title, content, secondaryContent }: Conta
       
       {/* Conteúdo secundário opcional */}
       {secondaryContent && (
-        <p className="text-foreground/70 text-sm mt-1">{secondaryContent}</p>
+        <p className="text-foreground/70 mt-1">{secondaryContent}</p>
       )}
     </div>
   );
@@ -63,6 +63,7 @@ export const ContactInfo = () => {
         icon={Phone}
         title="Telefone"
         content="+55 54 99883 3682"
+        secondaryContent="+55 54 99969 9949"
       />
 
       {/* Informação de Localização */}
