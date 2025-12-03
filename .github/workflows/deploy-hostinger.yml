@@ -42,7 +42,6 @@ jobs:
       HOSTINGER_SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
       HOSTINGER_SSH_USERNAME: ${{ secrets.HOSTINGER_SSH_USERNAME }}
       HOSTINGER_SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
-    if: ${{ env.HOSTINGER_SSH_HOST != '' && env.HOSTINGER_SSH_USERNAME != '' && env.HOSTINGER_SSH_PRIVATE_KEY != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,6 +50,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Deploy via SFTP
+        if: ${{ env.HOSTINGER_SSH_HOST != '' && env.HOSTINGER_SSH_USERNAME != '' && env.HOSTINGER_SSH_PRIVATE_KEY != '' }}
         uses: burnett01/rsync-deployments@v1.2.4
         with:
           switches: -avzr --delete --exclude=.well-known/
