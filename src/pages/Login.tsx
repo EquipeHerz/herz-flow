@@ -22,7 +22,7 @@ const Login = () => {
     
     // Mock authentication with different user types
     const users = {
-      "admin": { password: "admin123", role: "admin", name: "Administrador" },
+      "grupoherz": { password: "2025grupoherzdashboard", role: "admin", name: "Administrador" },
       "techsolutions": { password: "tech123", role: "empresa", name: "Tech Solutions" },
       "joao.silva": { password: "joao123", role: "cliente", name: "João Silva" }
     };
@@ -72,7 +72,7 @@ const Login = () => {
               <Mail aria-hidden="true" className="field-icon h-5 w-5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="admin, techsolutions ou joao.silva"
+                placeholder="Informe seu usuário"
                 value={credentials.email}
                 onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                 required
@@ -100,12 +100,14 @@ const Login = () => {
             Entrar no Dashboard
           </Button>
 
+          {/*
           <div className="mt-4 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
             <p className="font-semibold mb-2">Credenciais de teste:</p>
             <p>👨‍💼 Admin: <code className="text-accent">admin / admin123</code></p>
             <p>🏢 Empresa: <code className="text-accent">techsolutions / tech123</code></p>
             <p>👤 Cliente: <code className="text-accent">joao.silva / joao123</code></p>
           </div>
+          */}
 
           <div className="text-center mt-4">
             <a href="/" className="text-sm text-accent hover:underline">
