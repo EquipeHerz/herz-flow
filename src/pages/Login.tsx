@@ -20,16 +20,18 @@ const Login = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Mock authentication with different user types
     const users = {
-      "grupoherz": { password: "2025grupoherzdashboard", role: "admin", name: "Administrador" },
-      "techsolutions": { password: "tech123", role: "empresa", name: "Tech Solutions" },
-      "joao.silva": { password: "joao123", role: "cliente", name: "João Silva" }
-    };
+      "grupoherz": { role: "admin", name: "Administrador", envKey: "VITE_ADMIN_PASSWORD" },
+      "techsolutions": { role: "empresa", name: "Tech Solutions", envKey: "VITE_EMPRESA_PASSWORD" },
+      "joao.silva": { role: "cliente", name: "João Silva", envKey: "VITE_CLIENTE_PASSWORD" }
+    } as const;
 
     const user = users[credentials.email as keyof typeof users];
     
-    if (user && user.password === credentials.password) {
+    const env = import.meta.env as Record<string, string>;
+    const envPassword = user ? env[user.envKey] : undefined;
+    
+    if (user && envPassword && credentials.password === envPassword) {
       // Save session to localStorage
       localStorage.setItem("userSession", JSON.stringify({
         username: credentials.email,
