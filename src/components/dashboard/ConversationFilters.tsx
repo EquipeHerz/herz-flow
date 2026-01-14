@@ -2,7 +2,7 @@
  * ConversationFilters Component
  * 
  * Barra de filtros para conversas no dashboard.
- * Permite filtrar por busca de texto, intervalo de datas e empresa (apenas para admin).
+ * Permite filtrar por busca de texto, data e empresa (apenas para admin).
  * 
  * @component
  * @example
@@ -11,8 +11,7 @@
  *   onSearchChange={setSearch}
  *   dateStart={start}
  *   onDateStartChange={setStart}
- *   dateEnd={end}
- *   onDateEndChange={setEnd}
+ *   companies={["Embeddixy", "Tech Solutions"]}
  *   filterEmpresa={empresa}
  *   onFilterEmpresaChange={setEmpresa}
  *   isAdmin={true}
@@ -39,42 +38,30 @@ interface ConversationFiltersProps {
   dateStart: string;
   /** Callback para atualizar a data inicial */
   onDateStartChange: (value: string) => void;
-  /** Data final do filtro (formato: YYYY-MM-DD) */
-  dateEnd: string;
-  /** Callback para atualizar a data final */
-  onDateEndChange: (value: string) => void;
   /** Empresa selecionada no filtro ("all" para todas) */
   filterEmpresa: string;
   /** Callback para atualizar o filtro de empresa */
   onFilterEmpresaChange: (value: string) => void;
   /** Se o usuário é admin (exibe filtro de empresa) */
   isAdmin: boolean;
+  /** Lista de empresas disponíveis baseada nos cards */
+  companies: string[];
 }
-
-/**
- * Lista de empresas disponíveis para filtragem
- */
-const EMPRESAS = [
-  { value: "all", label: "Todas as empresas" },
-  { value: "Tech Solutions", label: "Tech Solutions" },
-  { value: "Hotel Imperial", label: "Hotel Imperial" },
-  { value: "Turismo Aventura", label: "Turismo Aventura" },
-];
 
 export const ConversationFilters = ({
   searchTerm,
   onSearchChange,
   dateStart,
   onDateStartChange,
-  dateEnd,
-  onDateEndChange,
   filterEmpresa,
   onFilterEmpresaChange,
   isAdmin,
+  companies,
 }: ConversationFiltersProps) => {
+  const options = ["all", ...companies];
   return (
     <Card className="p-6 mb-6 border-border/50">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Campo de Busca por ID ou Nome */}
         <div className="relative">
           <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -88,30 +75,16 @@ export const ConversationFilters = ({
           />
         </div>
 
-        {/* Filtro de Data Inicial */}
+        {/* Filtro de Data */}
         <div className="relative">
           <Calendar aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="date"
-            placeholder="Data inicial"
+            placeholder="Data"
             value={dateStart}
             onChange={(e) => onDateStartChange(e.target.value)}
             className="pl-12"
-            aria-label="Data inicial"
-            style={{ paddingLeft: '2.5rem' }}
-          />
-        </div>
-
-        {/* Filtro de Data Final */}
-        <div className="relative">
-          <Calendar aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="date"
-            placeholder="Data final"
-            value={dateEnd}
-            onChange={(e) => onDateEndChange(e.target.value)}
-            className="pl-12"
-            aria-label="Data final"
+            aria-label="Data"
             style={{ paddingLeft: '2.5rem' }}
           />
         </div>
@@ -120,12 +93,12 @@ export const ConversationFilters = ({
         {isAdmin && (
           <Select value={filterEmpresa} onValueChange={onFilterEmpresaChange}>
             <SelectTrigger>
-              <SelectValue placeholder="Filtrar por empresa" />
+              <SelectValue placeholder="Todas as empresas" />
             </SelectTrigger>
             <SelectContent>
-              {EMPRESAS.map((empresa) => (
-                <SelectItem key={empresa.value} value={empresa.value}>
-                  {empresa.label}
+              {options.map((empresa) => (
+                <SelectItem key={empresa} value={empresa}>
+                  {empresa === "all" ? "Todas as empresas" : empresa}
                 </SelectItem>
               ))}
             </SelectContent>

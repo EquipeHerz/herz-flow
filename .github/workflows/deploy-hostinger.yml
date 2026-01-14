@@ -60,3 +60,4 @@ jobs:
           remote_user: ${{ env.HOSTINGER_SSH_USERNAME }}
           remote_key: ${{ env.HOSTINGER_SSH_PRIVATE_KEY }}
           remote_port: 22
+          

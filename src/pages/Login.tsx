@@ -17,8 +17,21 @@ const Login = () => {
     if (c) c.remove();
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      const response = await fetch("https://n8n.srv1025595.hstgr.cloud/webhook/bdembeddixy?empresa=Embeddixy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      });
+      const text = await response.text();
+      console.log("Resposta do webhook:", text);
+    } catch (err) {
+      console.error("Erro ao chamar webhook:", err);
+    }
+    const email = credentials.email.trim();
+    const password = credentials.password;
     
     const users = {
       "grupoherz": { role: "admin", name: "Administrador", envKey: "VITE_ADMIN_PASSWORD" },
@@ -26,15 +39,15 @@ const Login = () => {
       "joao.silva": { role: "cliente", name: "João Silva", envKey: "VITE_CLIENTE_PASSWORD" }
     } as const;
 
-    const user = users[credentials.email as keyof typeof users];
+    const user = users[email as keyof typeof users];
     
     const env = import.meta.env as Record<string, string>;
     const envPassword = user ? env[user.envKey] : undefined;
     
-    if (user && envPassword && credentials.password === envPassword) {
+    if (user && envPassword && password === envPassword) {
       // Save session to localStorage
       localStorage.setItem("userSession", JSON.stringify({
-        username: credentials.email,
+        username: email,
         role: user.role,
         name: user.name,
         loginTime: new Date().toISOString()

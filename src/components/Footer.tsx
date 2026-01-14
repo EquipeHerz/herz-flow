@@ -21,6 +21,7 @@ const Footer = () => {
               <li><a href="/#clients" className="opacity-80 hover:opacity-100 transition-opacity">Clientes</a></li>
               <li><a href="/#contact" className="opacity-80 hover:opacity-100 transition-opacity">Contato</a></li>
               <li><Link to="/login" className="opacity-80 hover:opacity-100 transition-opacity">Dashboard</Link></li>
+              <li><Link to="/privacy-policy" className="opacity-80 hover:opacity-100 transition-opacity">Política de Privacidade</Link></li>
             </ul>
           </div>
 
