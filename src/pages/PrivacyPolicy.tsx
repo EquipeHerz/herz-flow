@@ -5,6 +5,33 @@ import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
+/**
+ * PrivacyPolicy (Página)
+ * 
+ * Descrição:
+ * - Página de Política de Privacidade com conteúdo estruturado, links informativos e ação de aceite.
+ * - Layout responsivo, espaçamento compacto e distinção visual em relação às demais seções do site.
+ * 
+ * Dependências/Requisitos:
+ * - Navigation e Footer (layout padrão do site).
+ * - FloatingElements para fundo decorativo.
+ * - Logo para imagem superior.
+ * - Button para ação "Aceitar", com navegação via react-router.
+ * 
+ * Comportamento:
+ * - Botão "Aceitar" dispara evento "privacy-accepted" e redireciona para "/".
+ * - Links externos possuem target="_blank" e rel="noopener noreferrer" por segurança.
+ * 
+ * Acessibilidade:
+ * - H1 central para contexto imediato.
+ * - Botão com aria-label e foco visível (herdado do estilo).
+ * 
+ * Valor de retorno:
+ * - JSX.Element representando a página completa.
+ * 
+ * Exemplo:
+ *  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+ */
 const PrivacyPolicy = () => {
   const navigate = useNavigate();
 
@@ -21,6 +48,7 @@ const PrivacyPolicy = () => {
           <p className="text-center text-sm text-muted-foreground">Última atualização: 14/01/2026</p>
 
           <section className="space-y-3">
+            {/* Introdução e aceite dos termos com link clicável */}
             <p className="text-muted-foreground leading-relaxed text-justify">
               A sua privacidade é de suma importância para nós. Esta Política de Privacidade descreve como o Grupo Herz Tecnologia e Inovação coleta, utiliza, armazena e protege as informações pessoais dos nossos visitantes e usuários, em conformidade com a Lei Geral de Proteção de Dados (LGPD) do Brasil.
             </p>
@@ -40,6 +68,7 @@ const PrivacyPolicy = () => {
 
           <section className="space-y-3">
             <h2 className="text-2xl font-semibold">1. Dados Coletados</h2>
+            {/* Lista de dados coletados com foco em necessidade e finalidade */}
             <p className="text-muted-foreground leading-relaxed text-justify">
               Coletamos apenas os dados estritamente necessários para a finalidade específica do nosso serviço (ex: nome e e-mail para newsletter, ou informações de contato para um orçamento). Os tipos de dados que podemos coletar incluem:
             </p>
@@ -55,6 +84,7 @@ const PrivacyPolicy = () => {
 
           <section className="space-y-3">
             <h2 className="text-2xl font-semibold">2. Finalidade da Coleta de Dados</h2>
+            {/* Finalidades explicitadas em lista para leitura rápida */}
             <p className="text-muted-foreground leading-relaxed text-justify">
               Utilizamos os dados coletados exclusivamente para as seguintes finalidades:
             </p>
@@ -67,6 +97,7 @@ const PrivacyPolicy = () => {
 
           <section className="space-y-3">
             <h2 className="text-2xl font-semibold">3. Preservação e Armazenamento dos Dados</h2>
+            {/* Segurança e retenção de dados com medidas técnicas e administrativas */}
             <p className="text-muted-foreground leading-relaxed text-justify">
               Todos os dados pessoais coletados são armazenados em servidores seguros, utilizando medidas técnicas e administrativas para prevenir acessos não autorizados, perdas ou alterações.
             </p>
@@ -99,6 +130,7 @@ const PrivacyPolicy = () => {
 
           <section className="space-y-3">
             <h2 className="text-2xl font-semibold">5. Direitos do Titular dos Dados</h2>
+            {/* Direitos sob a LGPD com instruções para contato */}
             <p className="text-muted-foreground leading-relaxed text-justify">
               Conforme a LGPD, você possui direitos sobre seus dados pessoais. A qualquer momento, você pode:
             </p>
@@ -115,6 +147,7 @@ const PrivacyPolicy = () => {
 
           <section className="space-y-3">
             <h2 className="text-2xl font-semibold">6. Alterações nesta Política de Privacidade</h2>
+            {/* Alterações futuras com referência externa clicável */}
             <p className="text-muted-foreground leading-relaxed text-justify">
               Reservamo-nos o direito de modificar esta política a qualquer momento, especialmente para adaptá-la às{" "}
               <a
@@ -135,6 +168,7 @@ const PrivacyPolicy = () => {
               aria-label="Aceitar política de privacidade"
               className="min-w-[140px] h-11 md:h-12 px-6 active:scale-[0.98] transition-transform duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               onClick={() => {
+                // Registro simples do aceite (sem persistência local) e navegação para a Home
                 window.dispatchEvent(new CustomEvent("privacy-accepted"));
                 navigate("/");
               }}

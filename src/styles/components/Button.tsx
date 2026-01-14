@@ -2,10 +2,31 @@ import styled from "styled-components";
 
 /**
  * Styled Button
- * Propósito original: Fornecer um botão com variantes (default, destructive, outline, secondary, ghost, link)
- * Contexto de uso: Ações primárias/secundárias em formulários, modais e navegação
- * Estados especiais: hover, focus-visible com anel (ring + ring-offset), disabled (inativo)
- * Responsabilidades específicas: Aplicar tipografia, espaçamentos e transições compatíveis com o design system
+ * 
+ * Finalidade:
+ * - Fornece um botão estilizado com variantes visuais e tamanhos consistentes com o design system.
+ * - Garante acessibilidade (focus-visible) e estados padrão (hover, disabled) em todos os navegadores suportados.
+ * 
+ * Padrões/Dependências:
+ * - Baseado em styled-components com tokens de tema (theme.colors, theme.typography, theme.radii, theme.transitions).
+ * - Integração com o ThemeProvider definido em src/styles/global/theme.js.
+ * - Tipicamente consumido via o wrapper de UI em src/components/ui/button.tsx.
+ * 
+ * Variantes disponíveis:
+ * - default, destructive, outline, secondary, ghost, link
+ * 
+ * Tamanhos disponíveis:
+ * - default, sm, lg, icon
+ * 
+ * Valores de retorno:
+ * - Componente React (HTMLButtonElement) estilizado, pronto para uso.
+ * 
+ * Possíveis erros/exceções:
+ * - Ausência de ThemeProvider pode causar falta de tokens e estilos inesperados.
+ * - Uso de props inválidas ($variant/$size) cai no comportamento padrão (default).
+ * 
+ * Exemplo de uso:
+ *  <StyledButton $variant="outline" $size="lg">Enviar</StyledButton>
  */
 
 type Variant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
@@ -19,10 +40,11 @@ export interface StyledButtonProps {
 export const StyledButton = styled.button.withConfig({
   shouldForwardProp: (prop) => !["$variant", "$size", "asChild"].includes(String(prop)),
 })<StyledButtonProps>`
+  /* Layout básico e tipografia */
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem; /* [&_svg]:size-4 and spacing */
+  gap: 0.5rem;
   white-space: nowrap;
   border-radius: ${({ theme }) => theme.radii.md};
   font-size: ${({ theme }) => theme.typography.sm};
@@ -36,7 +58,7 @@ export const StyledButton = styled.button.withConfig({
   /* Disabled state */
   &:disabled { opacity: 0.5; pointer-events: none; }
 
-  /* Focus ring with offset to emulate ring-offset-background */
+  /* Acessibilidade: anel de foco com offset (similar a ring-offset-background) */
   &:focus-visible {
     outline: none;
     box-shadow:
@@ -44,7 +66,7 @@ export const StyledButton = styled.button.withConfig({
       0 0 0 4px ${({ theme }) => theme.colors.background};
   }
 
-  /* Sizes */
+  /* Tamanhos (garantir área de toque >= 44px quando possível) */
   ${({ $size }) => {
     switch ($size) {
       case "sm":
@@ -58,7 +80,7 @@ export const StyledButton = styled.button.withConfig({
     }
   }}
 
-  /* Variants */
+  /* Variantes visuais (cores e comportamentos de hover) */
   ${({ $variant, theme }) => {
     switch ($variant) {
       case "destructive":
