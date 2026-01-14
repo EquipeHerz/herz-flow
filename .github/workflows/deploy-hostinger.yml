@@ -1,63 +1,35 @@
-name: Deploy to Hostinger
+
+name: Deploy Hostinger
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - run: npm ci
-      - run: npm run build
-      - name: Validate secrets
-        run: |
-          test -n "${{ secrets.HOSTINGER_FTP_SERVER }}" || (echo "Missing HOSTINGER_FTP_SERVER"; exit 1)
-          test -n "${{ secrets.HOSTINGER_FTP_USERNAME }}" || (echo "Missing HOSTINGER_FTP_USERNAME"; exit 1)
-          test -n "${{ secrets.HOSTINGER_FTP_PASSWORD }}" || (echo "Missing HOSTINGER_FTP_PASSWORD"; exit 1)
-      - name: Check DNS resolution
-        run: |
-          getent hosts "${{ secrets.HOSTINGER_FTP_SERVER }}" || (echo "DNS lookup failed for server"; exit 1)
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+          node-version: 18
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Gerar build
+        run: npm run build
+
+      - name: Enviar arquivos para Hostinger
+        uses: SamKirkland/FTP-Deploy-Action@v4
         with:
           server: ${{ secrets.HOSTINGER_FTP_SERVER }}
           username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
           password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          server-dir: /public_html/
           local-dir: dist/
-          protocol: ftps
-          dangerous-clean-slate: true
-          exclude: |
-            **/.well-known/**
-
-  sftp-deploy:
-    runs-on: ubuntu-latest
-    env:
-      HOSTINGER_SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
-      HOSTINGER_SSH_USERNAME: ${{ secrets.HOSTINGER_SSH_USERNAME }}
-      HOSTINGER_SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - run: npm ci
-      - run: npm run build
-      - name: Deploy via SFTP
-        if: ${{ env.HOSTINGER_SSH_HOST != '' && env.HOSTINGER_SSH_USERNAME != '' && env.HOSTINGER_SSH_PRIVATE_KEY != '' }}
-        uses: burnett01/rsync-deployments@v1.2.4
-        with:
-          switches: -avzr --delete --exclude=.well-known/
-          path: dist/
-          remote_path: /public_html/
-          remote_host: ${{ env.HOSTINGER_SSH_HOST }}
-          remote_user: ${{ env.HOSTINGER_SSH_USERNAME }}
-          remote_key: ${{ env.HOSTINGER_SSH_PRIVATE_KEY }}
-          remote_port: 22
-          
+          server-dir: /
