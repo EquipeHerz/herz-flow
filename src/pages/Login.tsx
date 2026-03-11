@@ -6,11 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@/styles/components/Field";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login } = useAuth();
   const [credentials, setCredentials] = useState({ email: "", password: "" });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const c = document.getElementById("chatbot-container");
@@ -19,51 +22,39 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const response = await fetch("https://n8n.srv1025595.hstgr.cloud/webhook/bdembeddixy?empresa=Embeddixy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({})
-      });
-      const text = await response.text();
-      console.log("Resposta do webhook:", text);
-    } catch (err) {
-      console.error("Erro ao chamar webhook:", err);
-    }
-    const email = credentials.email.trim();
-    const password = credentials.password;
-    
-    const users = {
-      "grupoherz": { role: "admin", name: "Administrador", envKey: "VITE_ADMIN_PASSWORD" },
-      "techsolutions": { role: "empresa", name: "Tech Solutions", envKey: "VITE_EMPRESA_PASSWORD" },
-      "joao.silva": { role: "cliente", name: "João Silva", envKey: "VITE_CLIENTE_PASSWORD" }
-    } as const;
+    setIsLoading(true);
 
-    const user = users[email as keyof typeof users];
-    
-    const env = import.meta.env as Record<string, string>;
-    const envPassword = user ? env[user.envKey] : undefined;
-    
-    if (user && envPassword && password === envPassword) {
-      // Save session to localStorage
-      localStorage.setItem("userSession", JSON.stringify({
-        username: email,
-        role: user.role,
-        name: user.name,
-        loginTime: new Date().toISOString()
-      }));
+    try {
+      // Webhook call (keeping existing functionality)
+      try {
+        fetch("https://n8n.srv1025595.hstgr.cloud/webhook/bdembeddixy?empresa=Embeddixy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({})
+        }).catch(err => console.error("Erro no webhook:", err));
+      } catch (err) {
+        console.error("Erro ao chamar webhook:", err);
+      }
+
+      await login({
+        email: credentials.email,
+        password: credentials.password
+      });
 
       toast({
         title: "Login realizado com sucesso!",
-        description: `Bem-vindo, ${user.name}!`,
+        description: "Bem-vindo ao Dashboard Herz!",
       });
-      setTimeout(() => navigate("/dashboard"), 1000);
-    } else {
+      // Navigation is handled in AuthContext but we can ensure it here too if needed
+      // navigate("/dashboard"); 
+    } catch (error) {
       toast({
         title: "Erro no login",
-        description: "Usuário ou senha incorretos.",
+        description: "Usuário ou senha incorretos. Verifique suas credenciais.",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -82,16 +73,16 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">Usuário</label>
+            <label className="text-sm font-medium text-foreground mb-2 block">E-mail</label>
             <Field>
               <Mail aria-hidden="true" className="field-icon h-5 w-5 text-muted-foreground" />
               <Input
-                type="text"
-                placeholder="Informe seu usuário"
+                type="email"
+                placeholder="seu@email.com"
                 value={credentials.email}
                 onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                 required
-                autoComplete="username"
+                autoComplete="email"
               />
             </Field>
           </div>
@@ -111,18 +102,23 @@ const Login = () => {
             </Field>
           </div>
 
-          <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-background">
-            Entrar no Dashboard
+          <Button 
+            type="submit" 
+            className="w-full bg-accent hover:bg-accent/90 text-background"
+            disabled={isLoading}
+          >
+            {isLoading ? "Entrando..." : "Entrar no Dashboard"}
           </Button>
 
-          {/*
-          <div className="mt-4 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-            <p className="font-semibold mb-2">Credenciais de teste:</p>
-            <p>👨‍💼 Admin: <code className="text-accent">admin / admin123</code></p>
-            <p>🏢 Empresa: <code className="text-accent">techsolutions / tech123</code></p>
-            <p>👤 Cliente: <code className="text-accent">joao.silva / joao123</code></p>
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg text-xs text-muted-foreground">
+            <p className="font-semibold mb-2">Credenciais de teste (Senha: 12345678):</p>
+            <div className="grid gap-1">
+              <p>👑 Admin: <code className="text-accent">admin@sistema.com</code></p>
+              <p>🏢 Empresa: <code className="text-accent">admin@empresa.com</code></p>
+              <p>📂 Setor: <code className="text-accent">admin@setor.com</code></p>
+              <p>👤 Operador: <code className="text-accent">operador@empresa.com</code></p>
+            </div>
           </div>
-          */}
 
           <div className="text-center mt-4">
             <a href="/" className="text-sm text-accent hover:underline">

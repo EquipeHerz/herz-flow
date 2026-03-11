@@ -1,0 +1,165 @@
+openapi: 3.0.0
+info:
+  title: Herz Flow API
+  description: API de autenticação e gestão de usuários para o sistema Herz Flow.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: Mock Server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserRole:
+      type: string
+      enum: [ADMIN_SISTEMA, ADMIN_EMPRESA, ADMIN_SETOR, OPERADOR]
+    
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        companyId:
+          type: string
+        sectorId:
+          type: string
+    
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+paths:
+  /auth/login:
+    post:
+      summary: Autenticar usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login realizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Credenciais inválidas
+
+  /auth/register:
+    post:
+      summary: Cadastrar novo usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                role:
+                  $ref: '#/components/schemas/UserRole'
+      responses:
+        '201':
+          description: Usuário criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /users:
+    get:
+      summary: Listar usuários
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: role
+          schema:
+            $ref: '#/components/schemas/UserRole'
+        - in: query
+          name: companyId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de usuários
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+  /companies:
+    post:
+      summary: Cadastrar empresa
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                legalName:
+                  type: string
+                cnpj:
+                  type: string
+      responses:
+        '201':
+          description: Empresa criada
+
+  /contracts/templates:
+    post:
+      summary: Criar template de contrato
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Template salvo

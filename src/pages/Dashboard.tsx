@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -44,20 +45,10 @@ interface ApiInteraction {
   time_sended?: string | number | null;
 }
 
-/**
- * Interface para dados da sessão do usuário
- */
-interface UserSession {
-  username: string;
-  role: "admin" | "empresa" | "cliente";
-  name: string;
-  loginTime: string;
-}
+// Removed UserSession interface, using User from context
 
-/**
- * Dados mock de conversas para demonstração
- */
 const MOCK_CONVERSATIONS: Conversation[] = [
+  // ... (keep mock data)
   { id: "001", clientName: "João Silva", empresa: "Tech Solutions", messages: 342, lastInteraction: "Há 2 horas", date: "2024-01-15", preview: "Preciso de ajuda com reserva...", origin: "instagram", originTimestamp: "2024-01-15T10:30:00" },
   { id: "002", clientName: "Maria Santos", empresa: "Tech Solutions", messages: 278, lastInteraction: "Há 5 horas", date: "2024-01-15", preview: "Quais são os horários disponíveis?", origin: "whatsapp", originTimestamp: "2024-01-15T09:10:00" },
   { id: "003", clientName: "Pedro Costa", empresa: "Hotel Imperial", messages: 189, lastInteraction: "Há 1 dia", date: "2024-01-14", preview: "Gostaria de informações sobre...", origin: "facebook", originTimestamp: "2024-01-14T16:45:00" },
@@ -72,14 +63,14 @@ const MOCK_CONVERSATIONS: Conversation[] = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user: session, logout } = useAuth();
   
   // ============= Estados =============
   /** Modo de visualização das conversas */
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   
-  /** Sessão do usuário logado */
-  const [session, setSession] = useState<UserSession | null>(null);
-  
+  // Session is now from context
+
   /** Conversa selecionada para exibir detalhes */
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   
@@ -103,6 +94,7 @@ const Dashboard = () => {
   const [apiByPhone, setApiByPhone] = useState<Record<string, ApiInteraction[]>>({});
   const [apiConversations, setApiConversations] = useState<Conversation[]>([]);
 
+  // ... (keep helper functions: toMillis, relativeFromNow, maskPhone, formatHMDate, formatHour, formatDate)
   const toMillis = (v: any): number | null => {
     if (v === null || v === undefined) return null;
     if (typeof v === "number") return v < 1e12 ? v * 1000 : v;
@@ -146,9 +138,10 @@ const Dashboard = () => {
     if (ms === null) return "";
     return new Date(ms).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
   };
+
   const selectedTimestamp = useMemo(() => {
     if (!selectedConversation) return null;
-    if (session?.role === "admin") {
+    if (session?.role === "ADMIN_SISTEMA") {
       const list = apiByPhone[selectedConversation.clientName] || [];
       if (list.length) {
         const ordered = list.slice().sort((a, b) => {
@@ -162,14 +155,16 @@ const Dashboard = () => {
     }
     return selectedConversation.originTimestamp ?? null;
   }, [selectedConversation, session, apiByPhone]);
+
   const showTimeBadge = useMemo(() => {
     if (!selectedConversation) return false;
-    if (session?.role !== "admin") return false;
+    if (session?.role !== "ADMIN_SISTEMA") return false;
     const list = apiByPhone[selectedConversation.clientName] || [];
     return list.length > 0;
   }, [selectedConversation, session, apiByPhone]);
 
   const fetchApiData = async () => {
+    // ... (keep fetchApiData implementation)
     try {
       const response = await fetch("https://n8n.srv1025595.hstgr.cloud/webhook/bdembeddixy?empresa=Embeddixy", {
         method: "POST",
@@ -234,52 +229,29 @@ const Dashboard = () => {
     }
   };
 
-  /**
-   * Effect: Verifica autenticação ao montar o componente
-   * Redireciona para login se não houver sessão válida
-   */
   useEffect(() => {
-    const savedSession = localStorage.getItem("userSession");
-    if (savedSession) {
-      setSession(JSON.parse(savedSession));
-    } else {
-      navigate("/login");
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    if (session?.role === "admin") {
+    if (session?.role === "ADMIN_SISTEMA") {
       fetchApiData();
       const id = setInterval(fetchApiData, 10000);
       return () => clearInterval(id);
     }
   }, [session]);
 
-  /**
-   * Realiza logout do usuário
-   * Remove sessão do localStorage e redireciona para login
-   */
   const handleLogout = () => {
-    localStorage.removeItem("userSession");
-    navigate("/login");
+    logout();
   };
 
-  /**
-   * Memo: Filtra conversas baseado no perfil do usuário e filtros aplicados
-   * - Admin: vê todas as conversas
-   * - Empresa: vê apenas conversas da sua empresa
-   * - Cliente: vê apenas suas próprias conversas
-   */
   const filteredConversations = useMemo(() => {
-    const base = session?.role === "admin" ? apiConversations : MOCK_CONVERSATIONS;
+    const base = session?.role === "ADMIN_SISTEMA" ? apiConversations : MOCK_CONVERSATIONS;
     let filtered = base;
 
     // Filtro baseado no perfil/role
-    if (session?.role === "empresa") {
-      filtered = filtered.filter(conv => conv.empresa === "Tech Solutions");
-    } else if (session?.role === "cliente") {
-      filtered = filtered.filter(conv => conv.clientName === session.name);
-    }
+    if (session?.role === "ADMIN_EMPRESA" || session?.role === "OPERADOR" || session?.role === "ADMIN_SETOR") {
+      filtered = filtered.filter(conv => conv.empresa === "Tech Solutions"); // Assuming mock/test
+    } 
+    // Cliente logic removed or mapped?
+    // If there is a 'cliente' role in legacy, it's not in UserRole anymore.
+    // Assuming OPERADOR behaves like 'empresa' for now.
 
     // Filtro de busca por ID ou nome
     if (searchTerm) {
@@ -295,7 +267,7 @@ const Dashboard = () => {
     }
     
     // Filtro de empresa (apenas para admin)
-    if (filterEmpresa !== "all" && session?.role === "admin") {
+    if (filterEmpresa !== "all" && session?.role === "ADMIN_SISTEMA") {
       filtered = filtered.filter(conv => conv.empresa === filterEmpresa);
     }
 
@@ -307,20 +279,14 @@ const Dashboard = () => {
     return sorted;
   }, [session, searchTerm, dateStart, filterEmpresa, apiConversations]);
 
-  /**
-   * Memo: Calcula paginação
-   */
   const totalPages = Math.ceil(filteredConversations.length / itemsPerPage);
   const paginatedConversations = filteredConversations.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  /**
-   * Memo: Calcula estatísticas para admin e empresa
-   */
   const stats = useMemo(() => {
-    if (session?.role === "admin") {
+    if (session?.role === "ADMIN_SISTEMA") {
       const totalInteractions = apiInteractions.length;
       const totalConversations = Object.keys(apiByPhone).length;
       const responsesPerConversation = totalConversations === 0
@@ -335,7 +301,7 @@ const Dashboard = () => {
         { label: "Média de Respostas", value: responsesPerConversation.toFixed(2), icon: Calendar, change: "+0" }
       ];
     }
-    const conversations = session?.role === "empresa" 
+    const conversations = (session?.role === "ADMIN_EMPRESA" || session?.role === "OPERADOR")
       ? MOCK_CONVERSATIONS.filter(c => c.empresa === "Tech Solutions")
       : [];
     const totalMessages = conversations.reduce((sum, conv) => sum + conv.messages, 0);
@@ -347,13 +313,11 @@ const Dashboard = () => {
     ];
   }, [session, apiInteractions, apiByPhone]);
 
-  // Não renderiza nada enquanto carrega a sessão
   if (!session) {
-    return null;
+    return null; // or loading
   }
 
-  // Determina se deve mostrar estatísticas (apenas admin e empresa)
-  const showStats = session.role === "admin" || session.role === "empresa";
+  const showStats = session.role === "ADMIN_SISTEMA" || session.role === "ADMIN_EMPRESA";
 
   return (
     <div className="min-h-screen bg-background">
@@ -380,7 +344,7 @@ const Dashboard = () => {
               </Button>
               <div>
                 <h1 className="text-xl md:text-2xl font-bold text-foreground">Dashboard Herz</h1>
-                <p className="text-sm text-muted-foreground">{session.name} - {session.role}</p>
+                <p className="text-sm text-muted-foreground">{session.name} - {session.role.replace('_', ' ')}</p>
               </div>
             </div>
             
@@ -420,8 +384,8 @@ const Dashboard = () => {
           onDateStartChange={setDateStart}
           filterEmpresa={filterEmpresa}
           onFilterEmpresaChange={setFilterEmpresa}
-          isAdmin={session.role === "admin"}
-          companies={[...new Set((session.role === "admin" ? apiConversations : MOCK_CONVERSATIONS).map(c => c.empresa))]}
+          isAdmin={session.role === "ADMIN_SISTEMA"}
+          companies={[...new Set((session.role === "ADMIN_SISTEMA" ? apiConversations : MOCK_CONVERSATIONS).map(c => c.empresa))]}
         />
 
         {/* Lista de Conversas */}
@@ -465,7 +429,7 @@ const Dashboard = () => {
                       key={conv.id}
                       conversation={conv}
                       viewMode="grid"
-                      showCompany={session.role === "admin"}
+                      showCompany={session.role === "ADMIN_SISTEMA"}
                       onClick={() => setSelectedConversation(conv)}
                     />
                   ))}
@@ -477,7 +441,7 @@ const Dashboard = () => {
                       key={conv.id}
                       conversation={conv}
                       viewMode="list"
-                      showCompany={session.role === "admin"}
+                      showCompany={session.role === "ADMIN_SISTEMA"}
                       onClick={() => setSelectedConversation(conv)}
                     />
                   ))}
@@ -518,12 +482,12 @@ const Dashboard = () => {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle className="text-2xl">
-              {session.role === "admin" && selectedConversation?.clientName
+              {session.role === "ADMIN_SISTEMA" && selectedConversation?.clientName
                 ? maskPhone(selectedConversation.clientName)
                 : `Conversa #${selectedConversation?.id}`}
             </DialogTitle>
             <DialogDescription className="text-base pt-4 space-y-4">
-              {/* Origem da conversa */}
+              {/* ... (rest of the dialog content - keeping it mostly same but checking role) */}
               {selectedConversation && (
                 <div className="p-3 rounded-lg bg-muted/40 border border-border/50">
                   <p className="font-semibold text-foreground mb-1">Origem da Conversa</p>
@@ -537,13 +501,13 @@ const Dashboard = () => {
                   </p>
                 </div>
               )}
-              {/* Informações da conversa */}
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="font-semibold text-foreground">Cliente</p>
                   <p className="text-muted-foreground">{selectedConversation?.clientName ? String(selectedConversation.clientName).split("@")[0] : ""}</p>
                 </div>
-                {session.role === "admin" && (
+                {session.role === "ADMIN_SISTEMA" && (
                   <div>
                     <p className="font-semibold text-foreground">Empresa</p>
                     <p className="text-muted-foreground">{selectedConversation?.empresa}</p>
@@ -563,7 +527,7 @@ const Dashboard = () => {
               <div className="pt-4">
                 <p className="font-semibold text-foreground mb-3">Histórico da Conversa</p>
                 <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
-                  {session.role === "admin" && selectedConversation && apiByPhone[selectedConversation.clientName]?.length ? (
+                  {session.role === "ADMIN_SISTEMA" && selectedConversation && apiByPhone[selectedConversation.clientName]?.length ? (
                     <>
                       {apiByPhone[selectedConversation.clientName].map((item, idx) => (
                         <div key={`${item.id}-${idx}`} className="space-y-3">

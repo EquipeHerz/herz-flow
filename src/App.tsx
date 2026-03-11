@@ -13,6 +13,11 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import RouteTransition from "./components/RouteTransition";
+import PrivateRoute from "./components/PrivateRoute";
+import UserList from "./pages/UserList";
+import RegisterUser from "./pages/RegisterUser";
+import RegisterCompany from "./pages/RegisterCompany";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
@@ -25,15 +30,25 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <RouteTransition />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AuthProvider>
+              <RouteTransition />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                
+                {/* Protected Routes */}
+                <Route element={<PrivateRoute />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/listagem-usuarios" element={<UserList />} />
+                  <Route path="/registro-usuario" element={<RegisterUser />} />
+                  <Route path="/registro-empresa" element={<RegisterCompany />} />
+                </Route>
+
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>
       </SCThemeProvider>
