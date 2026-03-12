@@ -17,12 +17,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutGrid, List, MessageSquare, TrendingUp, Users, Calendar, ArrowLeft, LogOut } from "lucide-react";
+import { LayoutGrid, List, MessageSquare, TrendingUp, Users, Calendar, Building, FileText, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,7 @@ interface ApiInteraction {
   tempo?: string | number;
   id_agente?: string;
   time_sended?: string | number | null;
+  redesocial?: string;
 }
 
 // Removed UserSession interface, using User from context
@@ -163,6 +164,14 @@ const Dashboard = () => {
     return list.length > 0;
   }, [selectedConversation, session, apiByPhone]);
 
+  const getOrigin = (redesocial?: string): "whatsapp" | "instagram" | "facebook" | "sms" => {
+    const rs = (redesocial || "").toLowerCase();
+    if (rs.includes("insta")) return "instagram";
+    if (rs.includes("face")) return "facebook";
+    if (rs === "sms" || rs === "ayla") return "sms";
+    return "whatsapp";
+  };
+
   const fetchApiData = async () => {
     // ... (keep fetchApiData implementation)
     try {
@@ -209,6 +218,10 @@ const Dashboard = () => {
         const originTs = new Date(lastMs).toISOString();
         const missingResponses = list.filter(item => !item.send_msg).length;
         const totalMessages = list.length * 2 - missingResponses;
+        
+        // Determine origin from the last interaction or any in the list
+        const social = last?.redesocial || list.find(i => i.redesocial)?.redesocial;
+
         return {
           id: (idx + 1).toString().padStart(3, "0"),
           clientName: phone || "Desconhecido",
@@ -217,7 +230,7 @@ const Dashboard = () => {
           lastInteraction: relativeFromNow(last?.tempo ?? last?.timestamp),
           date: dateStr,
           preview: lastMsg || "Sem mensagem",
-          origin: "whatsapp",
+          origin: getOrigin(social),
           originTimestamp: originTs
         };
       });
@@ -242,12 +255,15 @@ const Dashboard = () => {
   };
 
   const filteredConversations = useMemo(() => {
-    const base = session?.role === "ADMIN_SISTEMA" ? apiConversations : MOCK_CONVERSATIONS;
+    // Safety check for session
+    if (!session || !session.role) return [];
+
+    const base = session.role === "ADMIN_SISTEMA" ? apiConversations : MOCK_CONVERSATIONS;
     let filtered = base;
 
     // Filtro baseado no perfil/role
-    if (session?.role === "ADMIN_EMPRESA" || session?.role === "OPERADOR" || session?.role === "ADMIN_SETOR") {
-      filtered = filtered.filter(conv => conv.empresa === "Tech Solutions"); // Assuming mock/test
+    if (session.role !== "ADMIN_SISTEMA" && session.companyName) {
+      filtered = filtered.filter(conv => conv.empresa === session.companyName);
     } 
     // Cliente logic removed or mapped?
     // If there is a 'cliente' role in legacy, it's not in UserRole anymore.
@@ -267,7 +283,7 @@ const Dashboard = () => {
     }
     
     // Filtro de empresa (apenas para admin)
-    if (filterEmpresa !== "all" && session?.role === "ADMIN_SISTEMA") {
+    if (filterEmpresa !== "all" && session.role === "ADMIN_SISTEMA") {
       filtered = filtered.filter(conv => conv.empresa === filterEmpresa);
     }
 
@@ -314,53 +330,72 @@ const Dashboard = () => {
   }, [session, apiInteractions, apiByPhone]);
 
   if (!session) {
-    return null; // or loading
+    return null;
+  }
+
+  // Ensure role exists to prevent crash
+  if (!session.role) {
+    return <div className="flex items-center justify-center min-h-screen">Erro de sessão: Perfil não definido.</div>;
   }
 
   const showStats = session.role === "ADMIN_SISTEMA" || session.role === "ADMIN_EMPRESA";
 
   return (
-    <div className="min-h-screen bg-background">
-      <div
-        className="fixed top-4 right-4 z-40 px-3 py-2 rounded-md bg-card/90 border border-border/50 shadow-sm backdrop-blur-sm"
-        aria-live="polite"
-      >
-        <p className="text-foreground text-sm md:text-base leading-tight">
-          {formatHour((filteredConversations[0]?.originTimestamp) ?? Date.now())}
-        </p>
-        <p className="text-muted-foreground text-xs md:text-sm leading-tight">
-          {formatDate((filteredConversations[0]?.originTimestamp) ?? Date.now())}
-        </p>
-      </div>
-      {/* Cabeçalho fixo do dashboard */}
-      <header className="bg-card border-b border-border/50 sticky top-0 z-40 backdrop-blur-md">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Lado esquerdo: Botão voltar e título */}
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Voltar</span>
-              </Button>
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-foreground">Dashboard Herz</h1>
-                <p className="text-sm text-muted-foreground">{session.name} - {session.role.replace('_', ' ')}</p>
-              </div>
-            </div>
-            
-            {/* Lado direito: Controles */}
-            <div className="flex items-center space-x-2">
-              <ThemeToggle />
-              <Button variant="destructive" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline ml-2">Sair</span>
-              </Button>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Header />
+
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Quick Actions / Shortcuts */}
+        {session.role !== 'OPERADOR' && session.role !== 'FUNCIONARIO_SETOR' && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Acesso Rápido</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+              {session.role === 'ADMIN_SISTEMA' && (
+                <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full flex items-center justify-center min-h-[120px] sm:min-h-[140px]" onClick={() => navigate('/listagem-empresas')}>
+                  <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 gap-2 sm:gap-3 w-full h-full text-center">
+                    <div className="p-3 sm:p-4 bg-primary/10 rounded-full text-primary flex items-center justify-center shadow-sm">
+                      <Building className="h-6 w-6 sm:h-7 sm:w-7" />
+                    </div>
+                    <span className="font-medium text-xs sm:text-sm">Gerenciar Empresas</span>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR'].includes(session.role) && (
+                <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full flex items-center justify-center min-h-[120px] sm:min-h-[140px]" onClick={() => navigate('/listagem-usuarios')}>
+                  <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 gap-2 sm:gap-3 w-full h-full text-center">
+                    <div className="p-3 sm:p-4 bg-blue-500/10 rounded-full text-blue-500 flex items-center justify-center shadow-sm">
+                      <Users className="h-6 w-6 sm:h-7 sm:w-7" />
+                    </div>
+                    <span className="font-medium text-xs sm:text-sm">Gerenciar Usuários</span>
+                  </CardContent>
+                </Card>
+              )}
+
+              {['ADMIN_SISTEMA', 'ADMIN_EMPRESA'].includes(session.role) && (
+                <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full flex items-center justify-center min-h-[120px] sm:min-h-[140px]" onClick={() => navigate('/editor-contrato')}>
+                  <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 gap-2 sm:gap-3 w-full h-full text-center">
+                    <div className="p-3 sm:p-4 bg-green-500/10 rounded-full text-green-500 flex items-center justify-center shadow-sm">
+                      <FileText className="h-6 w-6 sm:h-7 sm:w-7" />
+                    </div>
+                    <span className="font-medium text-xs sm:text-sm">Contratos</span>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full flex items-center justify-center min-h-[120px] sm:min-h-[140px]" onClick={() => navigate('/meu-perfil')}>
+                 <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 gap-2 sm:gap-3 w-full h-full text-center">
+                    <div className="p-3 sm:p-4 bg-orange-500/10 rounded-full text-orange-500 flex items-center justify-center shadow-sm">
+                      <UserPlus className="h-6 w-6 sm:h-7 sm:w-7" />
+                    </div>
+                    <span className="font-medium text-xs sm:text-sm">Meu Perfil</span>
+                  </CardContent>
+              </Card>
             </div>
           </div>
-        </div>
-      </header>
+        )}
 
-      <main className="container mx-auto px-6 py-8">
         {/* Cartões de Estatísticas (apenas para Admin e Empresa) */}
         {showStats && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
@@ -389,24 +424,26 @@ const Dashboard = () => {
         />
 
         {/* Lista de Conversas */}
-        <Card className="p-6 border-border/50">
+        <div className="space-y-6">
           {/* Cabeçalho: Título e controles de visualização */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h2 className="text-xl font-semibold text-foreground">
               Conversas ({filteredConversations.length})
             </h2>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 bg-muted/30 p-1 rounded-lg">
               <Button
-                variant={viewMode === "grid" ? "default" : "outline"}
+                variant={viewMode === "grid" ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("grid")}
+                className="h-8 w-8 p-0"
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
               <Button
-                variant={viewMode === "list" ? "default" : "outline"}
+                variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("list")}
+                className="h-8 w-8 p-0"
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -415,15 +452,15 @@ const Dashboard = () => {
 
           {/* Conteúdo: Lista ou mensagem de vazio */}
           {paginatedConversations.length === 0 ? (
-            <div className="text-center py-12">
+            <Card className="p-12 text-center border-dashed">
               <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">Nenhuma conversa encontrada</p>
-            </div>
+            </Card>
           ) : (
             <>
               {/* Renderização baseada no modo de visualização */}
               {viewMode === "grid" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                   {paginatedConversations.map((conv) => (
                     <ConversationCard
                       key={conv.id}
@@ -474,7 +511,7 @@ const Dashboard = () => {
               )}
             </>
           )}
-        </Card>
+        </div>
       </main>
 
       {/* Modal de Detalhes da Conversa */}
@@ -548,7 +585,11 @@ const Dashboard = () => {
                           {item.send_msg && (
                             <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 border-l-4 border-purple-500 p-3 rounded-lg">
                               <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">
-                                {(item.id_agente ?? (item as any)["id-agente"]) ? `${item.id_agente ?? (item as any)["id-agente"]}` : "Bot"}
+                                {(() => {
+                                  const rawName = item.id_agente ?? (item as any)["id-agente"] ?? "Bot";
+                                  const lower = String(rawName).toLowerCase();
+                                  return lower.includes("agente") ? rawName : `Agente ${rawName}`;
+                                })()}
                               </p>
                               {item.time_sended && (
                                 <time

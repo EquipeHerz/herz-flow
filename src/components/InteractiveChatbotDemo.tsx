@@ -138,7 +138,7 @@ const InteractiveChatbotDemo = () => {
   };
 
   return (
-    <section className="py-16 md:py-24 bg-gradient-to-br from-background to-muted relative overflow-hidden" id="chatbot-demo">
+    <section className="w-full py-16 md:py-24 bg-gradient-to-br from-background to-muted relative overflow-hidden" id="chatbot-demo">
       {/* Elementos flutuantes decorativos */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-10 left-10 w-20 h-20 bg-accent/10 rounded-full animate-float"></div>

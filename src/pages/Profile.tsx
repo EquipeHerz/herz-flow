@@ -1,10 +1,25 @@
 import React, { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Header } from '@/components/Header';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { User, Mail, Phone, Briefcase, MapPin, Calendar, Building, Shield, Edit2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
   FormControl,
@@ -12,55 +27,15 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Header } from '@/components/Header';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Check } from 'lucide-react';
-
-// Avatares pré-definidos (usando ui-avatars e dicebear como placeholders otimizados)
-const PREDEFINED_AVATARS = [
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Calista',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Dorian',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Eliza',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Fabian',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Hannah',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Ivan',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Julia',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Kevin',
-];
+import { useToast } from '@/hooks/use-toast';
 
 const profileSchema = z.object({
-  // Dados Pessoais
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
-  birthDate: z.string().min(1, 'Data de nascimento obrigatória'),
-  cpf: z.string().min(11, 'CPF inválido'), // Validação simplificada
   phone: z.string().min(10, 'Telefone inválido'),
-  
-  // Dados Corporativos
-  corporateEmail: z.string().email('E-mail corporativo inválido'),
-  position: z.string().min(2, 'Cargo obrigatório'),
-  department: z.string().min(2, 'Departamento obrigatório'),
-  admissionDate: z.string().min(1, 'Data de admissão obrigatória'),
-  role: z.enum(['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR', 'OPERADOR']),
-  status: z.enum(['active', 'inactive']),
-
-  // Endereço
+  bio: z.string().max(500, 'Bio deve ter no máximo 500 caracteres').optional(),
   address: z.object({
     zipCode: z.string().min(8, 'CEP inválido'),
     street: z.string().min(3, 'Rua obrigatória'),
@@ -69,367 +44,305 @@ const profileSchema = z.object({
     city: z.string().min(2, 'Cidade obrigatória'),
     state: z.string().length(2, 'Estado deve ter 2 letras'),
   }),
-
-  // Acesso
-  username: z.string().min(3, 'Nome de usuário deve ter no mínimo 3 caracteres'),
-  password: z.string().min(8, 'Senha deve ter no mínimo 8 caracteres').optional().or(z.literal('')),
-  confirmPassword: z.string().optional().or(z.literal('')),
-  
-  // Extra
-  bio: z.string().max(500, 'Bio deve ter no máximo 500 caracteres').optional(),
-  avatar: z.string().optional(),
-}).refine((data) => {
-  if (data.password && data.password !== data.confirmPassword) {
-    return false;
-  }
-  return true;
-}, {
-  message: "As senhas não coincidem",
-  path: ["confirmPassword"],
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
+import FloatingElements from '@/components/FloatingElements';
+
 const Profile = () => {
-  const { user, isLoading } = useAuth();
+  const { user, updateUser } = useAuth();
   const { toast } = useToast();
-  const [selectedAvatar, setSelectedAvatar] = useState<string>(user?.avatar || PREDEFINED_AVATARS[0]);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.name || '',
-      birthDate: user?.birthDate || '',
-      cpf: user?.cpf || '',
-      phone: user?.phone || '',
-      corporateEmail: user?.corporateEmail || user?.email || '',
-      position: user?.position || '',
-      department: user?.department || '',
-      admissionDate: user?.admissionDate || '',
-      role: user?.role || 'OPERADOR',
-      status: user?.status || 'active',
+      name: '',
+      phone: '',
+      bio: '',
       address: {
-        zipCode: user?.address?.zipCode || '',
-        street: user?.address?.street || '',
-        number: user?.address?.number || '',
-        neighborhood: user?.address?.neighborhood || '',
-        city: user?.address?.city || '',
-        state: user?.address?.state || '',
+        zipCode: '',
+        street: '',
+        number: '',
+        neighborhood: '',
+        city: '',
+        state: '',
       },
-      username: user?.username || '',
-      password: '',
-      confirmPassword: '',
-      bio: user?.bio || '',
-      avatar: user?.avatar || '',
     },
   });
 
-  const onSubmit = async (data: ProfileFormValues) => {
-    // Mock update
-    console.log("Dados atualizados:", { ...data, avatar: selectedAvatar });
-    toast({
-      title: 'Perfil atualizado',
-      description: 'Seus dados foram atualizados com sucesso.',
-    });
+  const handleEditClick = () => {
+    if (user) {
+      form.reset({
+        name: user.name,
+        phone: user.phone,
+        bio: user.bio || '',
+        address: {
+          zipCode: user.address.zipCode,
+          street: user.address.street,
+          number: user.address.number,
+          neighborhood: user.address.neighborhood,
+          city: user.address.city,
+          state: user.address.state,
+        },
+      });
+      setIsEditOpen(true);
+    }
   };
 
-  const handleAvatarSelect = (avatarUrl: string) => {
-    setSelectedAvatar(avatarUrl);
-    form.setValue('avatar', avatarUrl);
+  const onEditSubmit = async (data: ProfileFormValues) => {
+    try {
+      if (updateUser) {
+        await updateUser(data);
+        toast({
+          title: 'Perfil atualizado',
+          description: 'Suas informações foram salvas com sucesso.',
+        });
+        setIsEditOpen(false);
+      }
+    } catch (error) {
+      toast({
+        title: 'Erro ao atualizar',
+        description: 'Não foi possível salvar suas alterações.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  if (isLoading || !user) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
-  }
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header showBackButton title="Meu Perfil" subtitle="Gerencie suas informações pessoais e de acesso" />
-      
-      <main className="flex-1 flex items-center justify-center p-6 md:p-10">
-        <Card className="w-full max-w-4xl shadow-lg">
-          <CardHeader className="text-center border-b bg-gradient-to-br from-hero-start to-hero-end pb-8">
-            <div className="flex flex-col items-center gap-4">
-              <div className="relative group cursor-pointer">
-                <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
-                  <AvatarImage src={selectedAvatar} alt="Avatar Preview" />
-                  <AvatarFallback>{user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-white text-xs font-medium">Alterar</span>
+      <Header showBackButton title="Meu Perfil" subtitle="Visualize e gerencie suas informações pessoais" />
+
+      <main className="flex-1 flex justify-center p-6 md:p-10">
+        <div className="w-full max-w-4xl space-y-6">
+          
+          <Card className="shadow-lg overflow-hidden border-t-4 border-t-primary">
+            <div className="bg-gradient-to-r from-primary/10 to-primary/5 h-32 md:h-48 relative overflow-hidden">
+              <FloatingElements className="absolute inset-0" />
+              {/* Avatar moved to CardHeader for better layout control */}
+            </div>
+            
+            <CardHeader className="px-6 md:px-10 pb-6 pt-0">
+              <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                <div className="-mt-16 flex-shrink-0">
+                  <Avatar className="h-32 w-32 border-4 border-background shadow-md">
+                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarFallback className="text-4xl">{user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </div>
+                
+                <div className="flex-1 w-full flex flex-col md:flex-row justify-between items-center md:items-start gap-4 mt-2 md:mt-0">
+                  <div className="text-center md:text-left space-y-1">
+                    <CardTitle className="text-2xl md:text-3xl font-bold text-foreground">{user.name}</CardTitle>
+                    <CardDescription className="text-lg font-medium text-primary flex flex-wrap justify-center md:justify-start items-center gap-2">
+                      {user.position}
+                      <Badge variant="outline" className="capitalize">
+                        {user.role.replace('ADMIN_', '').replace('_', ' ')}
+                      </Badge>
+                    </CardDescription>
+                  </div>
+                  <Button onClick={handleEditClick} className="flex-shrink-0">
+                    <Edit2 className="mr-2 h-4 w-4" /> Editar Perfil
+                  </Button>
                 </div>
               </div>
-              <div>
-                <CardTitle className="text-2xl">{user.name}</CardTitle>
-                <CardDescription className="text-base font-medium text-primary mt-1">
-                  {form.watch('position') || 'Cargo não definido'} • {form.watch('department') || 'Departamento não definido'}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-350px)] max-h-[800px]">
-              <div className="p-6 md:p-8">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                    
-                    {/* Seção de Avatar */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold border-b pb-2">Avatar</h3>
-                      <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-3">
-                        {PREDEFINED_AVATARS.map((avatar, index) => (
-                          <div 
-                            key={index}
-                            className={`
-                              relative cursor-pointer rounded-full p-1 transition-all hover:scale-105
-                              ${selectedAvatar === avatar ? 'ring-2 ring-primary ring-offset-2' : 'hover:ring-2 hover:ring-muted-foreground/30'}
-                            `}
-                            onClick={() => handleAvatarSelect(avatar)}
-                          >
-                            <img 
-                              src={avatar} 
-                              alt={`Avatar ${index + 1}`} 
-                              className="w-full h-full rounded-full bg-muted"
-                            />
-                            {selectedAvatar === avatar && (
-                              <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-0.5 border-2 border-background">
-                                <Check className="w-3 h-3" />
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+            </CardHeader>
+            
+            <CardContent className="px-6 md:px-10 pb-10 space-y-8">
+              
+              {/* Bio Section */}
+              {user.bio && (
+                <div className="bg-muted/30 p-4 rounded-lg border border-border/50">
+                  <p className="text-muted-foreground italic">"{user.bio}"</p>
+                </div>
+              )}
 
-                    {/* Dados Pessoais */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold border-b pb-2">Dados Pessoais</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                {/* Personal Info */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2 border-b pb-2">
+                    <User className="h-5 w-5 text-primary" /> Informações Pessoais
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                      <Label className="text-muted-foreground">Nome Completo</Label>
+                      <span className="font-medium">{user.name}</span>
+                    </div>
+                    <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                      <Label className="text-muted-foreground">CPF</Label>
+                      <span className="font-medium">{user.cpf}</span>
+                    </div>
+                    <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                      <Label className="text-muted-foreground">Nascimento</Label>
+                      <span className="font-medium">
+                        {new Date(user.birthDate).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Info */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2 border-b pb-2">
+                    <Mail className="h-5 w-5 text-primary" /> Contato
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                      <Label className="text-muted-foreground">Email Pessoal</Label>
+                      <span className="font-medium">{user.email}</span>
+                    </div>
+                    <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                      <Label className="text-muted-foreground">Email Corp.</Label>
+                      <span className="font-medium">{user.corporateEmail}</span>
+                    </div>
+                    <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                      <Label className="text-muted-foreground">Telefone</Label>
+                      <span className="font-medium">{user.phone}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Professional Info */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2 border-b pb-2">
+                    <Briefcase className="h-5 w-5 text-primary" /> Dados Profissionais
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                      <Label className="text-muted-foreground">Departamento</Label>
+                      <span className="font-medium">{user.department}</span>
+                    </div>
+                    <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                      <Label className="text-muted-foreground">Admissão</Label>
+                      <span className="font-medium">
+                        {new Date(user.admissionDate).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                    {user.companyName && (
+                      <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                        <Label className="text-muted-foreground">Empresa</Label>
+                        <span className="font-medium">{user.companyName}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Address Info */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2 border-b pb-2">
+                    <MapPin className="h-5 w-5 text-primary" /> Endereço
+                  </h3>
+                  
+                  <div className="space-y-1">
+                    <p className="font-medium">{user.address.street}, {user.address.number}</p>
+                    <p className="text-muted-foreground">{user.address.neighborhood}</p>
+                    <p className="text-muted-foreground">{user.address.city} - {user.address.state}</p>
+                    <p className="text-muted-foreground text-sm">CEP: {user.address.zipCode}</p>
+                  </div>
+                </div>
+
+              </div>
+
+              <Separator />
+
+              {/* Security / Account */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" /> Segurança da Conta
+                </h3>
+                <div className="flex items-center gap-4 bg-yellow-50 dark:bg-yellow-900/10 p-4 rounded-lg border border-yellow-200 dark:border-yellow-900/30">
+                  <div className="flex-1">
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">Alterar Senha</p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300">Para sua segurança, recomendamos alterar sua senha periodicamente.</p>
+                  </div>
+                  <Button variant="outline" className="border-yellow-600 text-yellow-700 hover:bg-yellow-100 dark:border-yellow-500 dark:text-yellow-200">
+                    Redefinir
+                  </Button>
+                </div>
+              </div>
+
+            </CardContent>
+          </Card>
+
+        </div>
+      </main>
+
+      {/* EDIT PROFILE MODAL */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Perfil</DialogTitle>
+            <DialogDescription>
+              Atualize suas informações pessoais. Dados sensíveis devem ser alterados pelo administrador.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[80vh]">
+             <Form {...form}>
+               <form id="edit-profile-form" onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-6 px-1">
+                  
+                  <div className="space-y-4">
+                      <h3 className="text-sm font-semibold uppercase text-muted-foreground">Dados Básicos</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField control={form.control} name="name" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome Completo *</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
+                          <FormItem><FormLabel>Nome Completo</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                        
-                        <FormField control={form.control} name="cpf" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>CPF *</FormLabel>
-                            <FormControl><Input placeholder="000.000.000-00" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="birthDate" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Data de Nascimento *</FormLabel>
-                            <FormControl><Input type="date" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-
                         <FormField control={form.control} name="phone" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Telefone (com DDD) *</FormLabel>
-                            <FormControl><Input placeholder="(00) 00000-0000" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
+                          <FormItem><FormLabel>Telefone / Celular</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                       </div>
-                    </div>
+                      <FormField control={form.control} name="bio" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Resumo Profissional</FormLabel>
+                          <FormControl><Textarea className="resize-none h-20" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                  </div>
 
-                    {/* Endereço */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold border-b pb-2">Endereço Completo</h3>
+                  <div className="space-y-4">
+                      <h3 className="text-sm font-semibold uppercase text-muted-foreground">Endereço</h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <FormField control={form.control} name="address.zipCode" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>CEP *</FormLabel>
-                            <FormControl><Input placeholder="00000-000" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
+                          <FormItem><FormLabel>CEP</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                        <FormField control={form.control} name="address.street" render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>Rua *</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
+                         <FormField control={form.control} name="address.street" render={({ field }) => (
+                          <FormItem className="md:col-span-2"><FormLabel>Rua</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                          <FormField control={form.control} name="address.number" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Número *</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
+                          <FormItem><FormLabel>Número</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="address.neighborhood" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Bairro *</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
+                          <FormItem><FormLabel>Bairro</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="address.city" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Cidade *</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
+                          <FormItem><FormLabel>Cidade</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="address.state" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Estado (UF) *</FormLabel>
-                            <FormControl><Input maxLength={2} placeholder="SP" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
+                          <FormItem><FormLabel>UF</FormLabel><FormControl><Input maxLength={2} {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                       </div>
-                    </div>
+                  </div>
 
-                    {/* Dados Corporativos */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold border-b pb-2">Dados Corporativos</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField control={form.control} name="corporateEmail" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>E-mail Corporativo *</FormLabel>
-                            <FormControl><Input type="email" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                        
-                        <FormField control={form.control} name="admissionDate" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Data de Admissão *</FormLabel>
-                            <FormControl><Input type="date" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
+               </form>
+             </Form>
+          </ScrollArea>
 
-                        <FormField control={form.control} name="position" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Cargo / Função *</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="department" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Departamento *</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="role" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nível de Acesso *</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="ADMIN_SISTEMA">Admin Sistema</SelectItem>
-                                <SelectItem value="ADMIN_EMPRESA">Admin Empresa</SelectItem>
-                                <SelectItem value="ADMIN_SETOR">Admin Setor</SelectItem>
-                                <SelectItem value="OPERADOR">Operador</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="status" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Status *</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="active">Ativo</SelectItem>
-                                <SelectItem value="inactive">Inativo</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                      </div>
-                    </div>
-
-                    {/* Acesso e Bio */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold border-b pb-2">Configurações de Acesso & Bio</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormField control={form.control} name="username" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome de Usuário *</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                        
-                        <FormField control={form.control} name="password" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nova Senha</FormLabel>
-                            <FormControl><Input type="password" placeholder="Deixe em branco para manter" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="confirmPassword" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Confirmar Senha</FormLabel>
-                            <FormControl><Input type="password" placeholder="Repita a senha" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                      </div>
-
-                      <FormField control={form.control} name="bio" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Resumo Profissional (Bio)</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Fale um pouco sobre suas responsabilidades..." 
-                              className="resize-none h-24" 
-                              maxLength={500}
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormDescription className="text-right">
-                            {field.value?.length || 0}/500 caracteres
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                    </div>
-
-                    <div className="flex justify-end gap-4 pt-4 border-t">
-                      <Button type="button" variant="outline" onClick={() => form.reset()}>
-                        Descartar Alterações
-                      </Button>
-                      <Button type="submit" className="min-w-[150px]">
-                        Salvar Alterações
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      </main>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
+            <Button type="submit" form="edit-profile-form">Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

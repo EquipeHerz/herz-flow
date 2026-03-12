@@ -1,6 +1,10 @@
-const FloatingElements = () => {
+interface FloatingElementsProps {
+  className?: string;
+}
+
+const FloatingElements = ({ className = "fixed inset-0" }: FloatingElementsProps) => {
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div className={`${className} overflow-hidden pointer-events-none z-0`}>
       {/* Floating circles - more visible */}
       <div className="absolute top-20 left-10 w-32 h-32 bg-float-cyan/20 rounded-full blur-xl animate-float" />
       <div className="absolute top-40 right-20 w-48 h-48 bg-float-blue/20 rounded-full blur-2xl animate-float-delayed" />

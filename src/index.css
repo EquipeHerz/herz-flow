@@ -54,6 +54,10 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
+    /* Specific variable for services/contact background in light mode */
+    --muted-section-light: 210 20% 96%;
+    --theme-toggle-light: 215 25% 25%;
+    
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
@@ -61,6 +65,10 @@ All colors MUST be HSL.
   .dark {
     --background: 215 30% 8%;
     --foreground: 210 20% 95%;
+
+    /* Override muted color for services/contact sections in light mode specifically */
+    --muted-light-mode: 210 20% 96%;
+
 
     --card: 215 25% 12%;
     --card-foreground: 210 20% 95%;

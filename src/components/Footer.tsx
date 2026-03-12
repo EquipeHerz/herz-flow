@@ -4,7 +4,7 @@ import Logo from "./Logo";
 
 const Footer = () => {
   return (
-    <footer className="bg-primary text-primary-foreground py-12">
+    <footer className="w-full bg-primary text-primary-foreground py-12">
       <div className="container mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div className="space-y-5">
@@ -43,15 +43,26 @@ const Footer = () => {
                 <span>Nova Petrópolis, RS</span>
               </li>
               <li className="space-y-1">
-                <p className="text-primary-foreground font-bold text-base md:text-lg">Junior</p>
                 <p className="opacity-80">
                   <a
-                    href="mailto:junior.rodeghiero@grupoherz.com.br"
+                    href="mailto:pedro.cordeiro@grupoherz.com.br"
                     className="inline-flex items-center gap-2 hover:opacity-100 transition-opacity"
-                    aria-label="Enviar e-mail para Junior"
+                    aria-label="Enviar e-mail"
                   >
                     <Mail size={16} />
-                    <span>junior.rodeghiero@grupoherz.com.br</span>
+                    <span>pedro.cordeiro@grupoherz.com.br</span>
+                  </a>
+                </p>
+                <p className="opacity-80">
+                  <a
+                    href="https://wa.me/5554998833682"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 hover:opacity-100 transition-opacity"
+                    aria-label="Abrir WhatsApp para +55 54 99883 3682"
+                  >
+                    <MessageCircle size={16} />
+                    <span>+55 54 99883 3682</span>
                   </a>
                 </p>
                 <p className="opacity-80">
@@ -64,26 +75,6 @@ const Footer = () => {
                   >
                     <MessageCircle size={16} />
                     <span>+55 54 99969 9949</span>
-                  </a>
-                </p>
-              </li>
-              <li className="space-y-1">
-                <p className="text-primary-foreground font-bold text-base md:text-lg">Pedro</p>
-                <p className="opacity-80 inline-flex items-center gap-2">
-                  <Mail size={16} />
-                  <span>pedro.cordeiro@grupoherz.com.br</span>
-                </p>
-                
-                <p className="opacity-80">
-                  <a
-                    href="https://wa.me/5554998833682"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 hover:opacity-100 transition-opacity"
-                    aria-label="Abrir WhatsApp para +55 54 99883 3682"
-                  >
-                    <MessageCircle size={16} />
-                    <span>+55 54 99883 3682</span>
                   </a>
                 </p>
               </li>

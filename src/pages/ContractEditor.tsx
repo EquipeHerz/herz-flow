@@ -40,15 +40,15 @@ import { format } from 'date-fns';
 
 // Mock Data
 const COMPANIES = [
-  { id: '1', name: 'Tech Solutions', cnpj: '12.345.678/0001-90', address: 'Rua da Inovação, 123' },
-  { id: '2', name: 'Hotel Imperial', cnpj: '98.765.432/0001-10', address: 'Av. das Palmeiras, 456' },
-  { id: '3', name: 'Turismo Aventura', cnpj: '45.678.901/0001-23', address: 'Estrada da Serra, 789' },
+  { id: '1', name: 'Herz Flow Tecnologia', cnpj: '12.345.678/0001-90', address: 'Av. Paulista, 1000' },
+  { id: '2', name: 'Tech Solutions', cnpj: '98.765.432/0001-10', address: 'Rua Funchal, 500' },
+  { id: '3', name: 'Hotel Imperial', cnpj: '45.678.901/0001-23', address: 'Estrada da Serra, 789' },
 ];
 
 const INITIAL_CONTRACTS = [
   {
     id: '1',
-    companyId: '1',
+    companyId: '2',
     companyName: 'Tech Solutions',
     title: 'Contrato de Prestação de Serviços - Manutenção',
     content: 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS\n\nCONTRATANTE: Tech Solutions, inscrita no CNPJ sob nº 12.345.678/0001-90, com sede em Rua da Inovação, 123.\n\nCONTRATADA: HERZ FLOW TECNOLOGIA LTDA...\n\nCLÁUSULA 1 - DO OBJETO\nO presente contrato tem como objeto a prestação de serviços de manutenção de software...\n\nValor: R$ 1.500,00 mensais.\nData: 24/02/2025',
@@ -58,7 +58,7 @@ const INITIAL_CONTRACTS = [
   },
   {
     id: '2',
-    companyId: '2',
+    companyId: '3', // Assuming '3' is Hotel Imperial or similar
     companyName: 'Hotel Imperial',
     title: 'Termo de Adesão - Plano Enterprise',
     content: 'TERMO DE ADESÃO\n\nPelo presente instrumento, a empresa Hotel Imperial adere ao Plano Enterprise...\n\nValor: R$ 3.000,00 mensais.\nData: 10/02/2024',
@@ -99,9 +99,8 @@ const ContractEditor = () => {
     let defaultCompanyId = '';
     
     // Auto-select company for non-System Admins
-    if (user?.role !== 'ADMIN_SISTEMA' && user?.company) {
-       const userCompany = COMPANIES.find(c => c.name === user.company);
-       if (userCompany) defaultCompanyId = userCompany.id;
+    if (user?.role !== 'ADMIN_SISTEMA' && user?.companyId) {
+       defaultCompanyId = user.companyId;
     }
 
     setFormData({
@@ -163,7 +162,7 @@ const ContractEditor = () => {
 
   const filteredContracts = contracts.filter(c => {
     // Security: Isolate contracts by company
-    if (user?.role !== 'ADMIN_SISTEMA' && user?.company && c.companyName !== user.company) {
+    if (user?.role !== 'ADMIN_SISTEMA' && user?.companyId && c.companyId !== user.companyId) {
        return false;
     }
 
@@ -175,7 +174,7 @@ const ContractEditor = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header 
-        showBackButton={view !== 'list'} 
+        showBackButton={true}
         title={view === 'list' ? "Gestão de Contratos" : view === 'form' ? "Editor de Contrato" : "Visualização de Contrato"}
         subtitle={view === 'list' ? "Gerencie os contratos das empresas parceiras" : undefined}
       />
@@ -185,23 +184,10 @@ const ContractEditor = () => {
           
           {/* LIST VIEW */}
           {view === 'list' && (
-            <Card className="shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-7">
-                <div className="space-y-1">
-                  <CardTitle className="text-2xl">Contratos</CardTitle>
-                  <CardDescription>
-                    {filteredContracts.length} contratos encontrados
-                  </CardDescription>
-                </div>
-                {isAdmin && (
-                  <Button onClick={handleCreateNew}>
-                    <Plus className="mr-2 h-4 w-4" /> Novo Contrato
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="relative flex-1 max-w-sm">
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                  <div className="relative flex-1 w-full sm:w-[300px]">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Buscar por empresa ou título..."
@@ -211,9 +197,25 @@ const ContractEditor = () => {
                     />
                   </div>
                 </div>
+                {isAdmin && (
+                  <Button onClick={handleCreateNew}>
+                    <Plus className="mr-2 h-4 w-4" /> Novo Contrato
+                  </Button>
+                )}
+              </div>
 
-                <div className="rounded-md border">
-                  <Table>
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <div className="space-y-1">
+                    <CardTitle className="text-2xl">Contratos</CardTitle>
+                    <CardDescription>
+                      {filteredContracts.length} contratos encontrados
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Empresa</TableHead>
@@ -264,6 +266,7 @@ const ContractEditor = () => {
                 </div>
               </CardContent>
             </Card>
+            </div>
           )}
 
           {/* FORM VIEW (CREATE/EDIT) */}

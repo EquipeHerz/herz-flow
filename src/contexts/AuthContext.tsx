@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   createUser: (data: RegisterData) => Promise<void>;
+  updateUser: (data: Partial<User>) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -25,23 +26,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const checkAuth = async () => {
       try {
         const storedUser = authService.getCurrentUser();
-        const storedToken = localStorage.getItem('herz_auth_token'); // Make sure this matches service constant
+        const storedToken = localStorage.getItem('herz_auth_token');
 
-        // Validate if user has required new fields
+        // Validate if user has required basic fields
         const isValidUser = storedUser && 
-                            storedUser.role && 
-                            storedUser.address && 
-                            storedUser.position;
+                            storedUser.id &&
+                            storedUser.role;
 
         if (isValidUser && storedToken) {
-          // Verify token validity (mock)
-          // In real app: call /me endpoint
           setUser(storedUser);
           setIsAuthenticated(true);
         } else {
-          // Clear potentially corrupted data
+          // Do NOT automatically logout/clear here if it's just a missing token on public pages
+          // But if we are initializing, we should ensure clean state
           if (storedUser || storedToken) {
-            authService.logout();
+             authService.logout();
           }
           setUser(null);
           setIsAuthenticated(false);
@@ -100,6 +99,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateUser = async (data: Partial<User>) => {
+    setIsLoading(true);
+    try {
+      // In a real app, call API to update user
+      // For now, update local state and storage
+      if (user) {
+        const updatedUser = { ...user, ...data };
+        setUser(updatedUser);
+        localStorage.setItem('herz_user_data', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -108,7 +124,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, register, createUser, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, register, createUser, updateUser, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

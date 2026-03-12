@@ -11,7 +11,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ roles }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div>Carregando...</div>; // Or a proper loading spinner
+    return null; // Or a proper loading spinner
   }
 
   if (!isAuthenticated) {

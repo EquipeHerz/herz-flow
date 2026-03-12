@@ -12,7 +12,7 @@ const DEFAULT_ADDRESS = {
   zipCode: '01000-000'
 };
 
-// Mock users for testing
+// Mock users for testing - 4 distinct profiles
 const MOCK_USERS: User[] = [
   {
     id: '1',
@@ -48,7 +48,8 @@ const MOCK_USERS: User[] = [
     role: 'ADMIN_EMPRESA',
     status: 'active',
     bio: 'Gerente de tecnologia da Tech Solutions.',
-    companyId: 'comp-123',
+    companyId: '2',
+    companyName: 'Tech Solutions',
     avatar: 'https://github.com/shadcn.png',
   },
   {
@@ -67,7 +68,8 @@ const MOCK_USERS: User[] = [
     role: 'ADMIN_SETOR',
     status: 'active',
     bio: 'Responsável pelo setor de suporte técnico.',
-    companyId: 'comp-123',
+    companyId: '2',
+    companyName: 'Tech Solutions',
     sectorId: 'sector-456',
     avatar: 'https://github.com/shadcn.png',
   },
@@ -87,7 +89,8 @@ const MOCK_USERS: User[] = [
     role: 'OPERADOR',
     status: 'active',
     bio: 'Atendimento ao cliente nível 1.',
-    companyId: 'comp-123',
+    companyId: '2',
+    companyName: 'Tech Solutions',
     sectorId: 'sector-456',
     avatar: 'https://github.com/shadcn.png',
   }
@@ -96,13 +99,14 @@ const MOCK_USERS: User[] = [
 // Mock password validation (simple check)
 const isValidPassword = (password: string) => {
   // Mock check: in reality we would hash and compare
-  return password.length >= 8; 
+  // For dev purposes, accept any password >= 3 chars
+  return password.length >= 3; 
 };
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 800));
 
     const user = MOCK_USERS.find(u => u.email === credentials.email);
 
@@ -114,7 +118,9 @@ export const authService = {
     const token = btoa(JSON.stringify({
       id: user.id,
       role: user.role,
-      exp: Date.now() + 3600000 // 1 hour
+      companyId: user.companyId,
+      sectorId: user.sectorId,
+      exp: Date.now() + 3600000 * 24 // 24 hours
     }));
 
     // Store in localStorage
@@ -125,7 +131,7 @@ export const authService = {
   },
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Check if email already exists
     if (MOCK_USERS.some(u => u.email === data.email)) {
@@ -169,7 +175,7 @@ export const authService = {
   },
 
   async createUser(data: RegisterData): Promise<User> {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Check if email already exists
     if (MOCK_USERS.some(u => u.email === data.email)) {
@@ -219,29 +225,68 @@ export const authService = {
 
   isAuthenticated(): boolean {
     const token = localStorage.getItem(STORAGE_KEY);
-    // Add token expiration check if needed
     return !!token;
   },
 
-  // Helper to check permissions based on the matrix
-  hasPermission(user: User, resource: string, action: 'create' | 'read' | 'update' | 'delete'): boolean {
-    if (user.role === 'ADMIN_SISTEMA') return true;
+  // Permission Logic
+  canManageUser(currentUser: User, targetRole: UserRole): boolean {
+    if (currentUser.role === 'ADMIN_SISTEMA') return true;
+    
+    if (currentUser.role === 'ADMIN_EMPRESA') {
+      // Can manage own role (edit self), sector admins, sector employees, and operators
+      return ['ADMIN_EMPRESA', 'ADMIN_SETOR', 'FUNCIONARIO_SETOR', 'OPERADOR'].includes(targetRole);
+    }
+    
+    if (currentUser.role === 'ADMIN_SETOR') {
+      return ['FUNCIONARIO_SETOR', 'OPERADOR'].includes(targetRole);
+    }
+    
+    return false;
+  },
 
-    if (user.role === 'ADMIN_EMPRESA') {
-      // Can manage users within their company, except system admins
-      if (resource === 'user') return true; // simplified logic
-      if (resource === 'contract' && action === 'read') return true;
-      if (['agent', 'lead', 'department'].includes(resource)) return true;
+  getAvailableRoles(currentUser: User): UserRole[] {
+    if (currentUser.role === 'ADMIN_SISTEMA') {
+      return ['ADMIN_EMPRESA', 'ADMIN_SETOR', 'FUNCIONARIO_SETOR', 'OPERADOR'];
+    }
+    if (currentUser.role === 'ADMIN_EMPRESA') {
+      return ['ADMIN_EMPRESA', 'ADMIN_SETOR', 'FUNCIONARIO_SETOR', 'OPERADOR'];
+    }
+    if (currentUser.role === 'ADMIN_SETOR') {
+      return ['FUNCIONARIO_SETOR', 'OPERADOR'];
+    }
+    return [];
+  },
+
+  hasPermission(role: UserRole, resource: string, action: 'create' | 'read' | 'update' | 'delete'): boolean {
+    // System Admin has full access
+    if (role === 'ADMIN_SISTEMA') return true;
+
+    // Company Admin
+    if (role === 'ADMIN_EMPRESA') {
+      if (resource === 'company') return true; // Can create/manage companies (scope handled in UI)
+      if (resource === 'user') return true; // Can manage users
+      if (resource === 'contract') return action === 'read'; // Read-only access to contracts
+      if (resource === 'dashboard') return true;
+      return true;
     }
 
-    if (user.role === 'ADMIN_SETOR') {
-      if (resource === 'operator') return true;
-      if (resource === 'contract' && action === 'read') return true;
-      if (['agent', 'lead'].includes(resource)) return true;
+    // Sector Admin
+    if (role === 'ADMIN_SETOR') {
+      if (resource === 'company') return false;
+      if (resource === 'user') return true; // Can manage operators/employees
+      if (resource === 'contract') return action === 'read'; // Read-only access to contracts
+      if (resource === 'dashboard') return true;
+      return true;
     }
 
-    if (user.role === 'OPERADOR') {
-      if (resource === 'profile' && action === 'read') return true;
+    // Operator or Sector Employee
+    if (role === 'OPERADOR' || role === 'FUNCIONARIO_SETOR') {
+      if (resource === 'dashboard') return true;
+      if (resource === 'profile') return true;
+      if (resource === 'user') return false;
+      if (resource === 'company') return false;
+      if (resource === 'contract') return false;
+      return false;
     }
 
     return false;

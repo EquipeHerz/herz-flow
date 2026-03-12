@@ -39,7 +39,7 @@ const userSchema = z.object({
   position: z.string().min(2, 'Cargo obrigatório'),
   department: z.string().min(2, 'Departamento obrigatório'),
   admissionDate: z.string().min(1, 'Data de admissão obrigatória'),
-  role: z.enum(['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR', 'OPERADOR']),
+  role: z.enum(['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR', 'FUNCIONARIO_SETOR', 'OPERADOR']),
   status: z.enum(['active', 'inactive']),
 
   // Endereço
@@ -300,6 +300,7 @@ const RegisterUser = () => {
                                   <>
                                     <SelectItem value="ADMIN_EMPRESA">Admin Empresa</SelectItem>
                                     <SelectItem value="ADMIN_SETOR">Admin Setor</SelectItem>
+                                    <SelectItem value="FUNCIONARIO_SETOR">Funcionário Setor</SelectItem>
                                   </>
                                 )}
                                 <SelectItem value="OPERADOR">Operador</SelectItem>

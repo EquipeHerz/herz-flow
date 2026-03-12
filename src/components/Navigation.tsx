@@ -75,7 +75,7 @@ const Navigation = () => {
             ))}
             <ThemeToggle />
             <Link to="/login">
-              <Button variant="outline" className="border-accent text-accent hover:bg-accent hover:text-background">
+              <Button variant="outline" className="border-accent text-foreground hover:bg-primary hover:text-primary-foreground dark:text-foreground dark:hover:text-primary-foreground transition-all duration-300">
                 Dashboard
               </Button>
             </Link>
@@ -116,7 +116,7 @@ const Navigation = () => {
             <div className="flex items-center justify-between pt-2">
               <ThemeToggle />
               <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="flex-1 ml-4">
-                <Button variant="outline" className="w-full border-accent text-accent hover:bg-accent hover:text-background">
+                <Button variant="outline" className="w-full border-accent text-foreground hover:bg-primary hover:text-primary-foreground dark:text-foreground dark:hover:text-primary-foreground transition-all duration-300">
                   Dashboard
                 </Button>
               </Link>

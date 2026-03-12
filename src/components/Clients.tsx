@@ -10,7 +10,7 @@ const Clients = () => {
   ];
 
   return (
-    <section id="clients" className="py-24 bg-background relative">
+    <section id="clients" className="w-full py-24 bg-background relative">
       <div className="container mx-auto px-6">
         <div className="text-center space-y-4 mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground">

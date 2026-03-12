@@ -56,7 +56,7 @@ const Services = () => {
   ];
 
   return (
-    <section id="services" className="py-24 bg-muted/30 relative">
+    <section id="services" className="w-full py-24 bg-muted-light/50 dark:bg-muted/30 relative">
       <div className="container mx-auto px-6">
         {/* Cabeçalho da seção */}
         <div className="text-center space-y-4 mb-16">

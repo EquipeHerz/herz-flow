@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types/auth';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, Plus, UserX } from 'lucide-react';
+import { Trash2, Edit, Plus, UserX, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
@@ -56,6 +56,7 @@ const INITIAL_USERS = [
     role: 'ADMIN_SISTEMA', 
     status: 'active', 
     company: 'Herz',
+    companyName: 'Herz',
     username: 'admin',
     corporateEmail: 'admin@herz.com.br',
     phone: '(11) 99999-9999',
@@ -81,6 +82,7 @@ const INITIAL_USERS = [
     role: 'ADMIN_EMPRESA', 
     status: 'active', 
     company: 'Tech Solutions',
+    companyName: 'Tech Solutions',
     username: 'admin_empresa',
     corporateEmail: 'admin@tech.com.br',
     phone: '(11) 98888-8888',
@@ -105,6 +107,7 @@ const INITIAL_USERS = [
     email: 'admin@setor.com', 
     role: 'ADMIN_SETOR', 
     status: 'active', 
+    companyName: 'Tech Solutions',
     company: 'Tech Solutions',
     username: 'admin_setor',
     corporateEmail: 'setor@tech.com.br',
@@ -130,6 +133,7 @@ const INITIAL_USERS = [
     email: 'operador@empresa.com', 
     role: 'OPERADOR', 
     status: 'active', // Restored as requested
+    companyName: 'Tech Solutions',
     company: 'Tech Solutions',
     username: 'operador',
     corporateEmail: 'operador@tech.com.br',
@@ -149,6 +153,32 @@ const INITIAL_USERS = [
     },
     bio: 'Atendente de suporte nível 1.'
   },
+  { 
+    id: '5', 
+    name: 'Funcionário Setor', 
+    email: 'funcionario@setor.com', 
+    role: 'FUNCIONARIO_SETOR', 
+    status: 'active', 
+    companyName: 'Tech Solutions',
+    company: 'Tech Solutions',
+    username: 'func_setor',
+    corporateEmail: 'func@tech.com.br',
+    phone: '(11) 95555-5555',
+    position: 'Analista',
+    department: 'Operações',
+    admissionDate: '2023-09-01',
+    cpf: '444.444.444-44',
+    birthDate: '1993-04-25',
+    address: {
+      zipCode: '44444-444',
+      street: 'Rua Operacional',
+      number: '500',
+      neighborhood: 'Centro',
+      city: 'São Paulo',
+      state: 'SP'
+    },
+    bio: 'Funcionário do setor de operações.'
+  },
 ];
 
 const userSchema = z.object({
@@ -163,7 +193,7 @@ const userSchema = z.object({
   position: z.string().min(2, 'Cargo obrigatório'),
   department: z.string().min(2, 'Departamento obrigatório'),
   admissionDate: z.string().min(1, 'Data de admissão obrigatória'),
-  role: z.enum(['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR', 'OPERADOR']),
+  role: z.enum(['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR', 'FUNCIONARIO_SETOR', 'OPERADOR']),
   status: z.enum(['active', 'inactive']),
 
   // Endereço
@@ -243,8 +273,26 @@ const UserList = () => {
   const canEdit = (targetUser: any) => {
     if (!currentUser) return false;
     if (currentUser.role === 'ADMIN_SISTEMA') return true;
-    if (currentUser.role === 'ADMIN_EMPRESA' && targetUser.role !== 'ADMIN_SISTEMA') return true;
-    if (currentUser.role === 'ADMIN_SETOR' && targetUser.role === 'OPERADOR') return true;
+    if (currentUser.role === 'ADMIN_EMPRESA') {
+       // Can edit sector admins, sector employees, and operators
+       // Ensure target is in same company
+       const targetCompany = targetUser.companyName || targetUser.company;
+       const myCompany = currentUser.companyName || currentUser.company;
+       
+       if (targetCompany !== myCompany) return false;
+       
+       return ['ADMIN_SETOR', 'FUNCIONARIO_SETOR', 'OPERADOR'].includes(targetUser.role);
+    }
+    if (currentUser.role === 'ADMIN_SETOR') {
+       // Can edit sector employees and operators
+       // Ensure target is in same company
+       const targetCompany = targetUser.companyName || targetUser.company;
+       const myCompany = currentUser.companyName || currentUser.company;
+       
+       if (targetCompany !== myCompany) return false;
+
+       return ['FUNCIONARIO_SETOR', 'OPERADOR'].includes(targetUser.role);
+    }
     return false;
   };
 
@@ -253,15 +301,18 @@ const UserList = () => {
     // System Admin can delete anyone
     if (currentUser.role === 'ADMIN_SISTEMA') return true;
     
+    const targetCompany = targetUser.companyName || targetUser.company;
+    const myCompany = currentUser.companyName || currentUser.company;
+    if (targetCompany !== myCompany) return false;
+
     // Company Admin cannot delete other Company Admins or System Admins
     if (currentUser.role === 'ADMIN_EMPRESA') {
-      return targetUser.role !== 'ADMIN_SISTEMA' && targetUser.role !== 'ADMIN_EMPRESA';
+      return ['ADMIN_SETOR', 'FUNCIONARIO_SETOR', 'OPERADOR'].includes(targetUser.role);
     }
     
-    // Sector Admin cannot delete (or just operators?) - Prompt implies stricter control.
-    // Assuming they can delete Operators if they can edit them.
+    // Sector Admin can delete sector employees and operators
     if (currentUser.role === 'ADMIN_SETOR') {
-       return targetUser.role === 'OPERADOR';
+       return ['FUNCIONARIO_SETOR', 'OPERADOR'].includes(targetUser.role);
     }
     
     return false;
@@ -298,7 +349,27 @@ const UserList = () => {
 
   const onEditSubmit = async (data: UserFormValues) => {
     // Update local state
-    setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...data, id: u.id, email: u.email, company: u.company } : u));
+    // Remove password/confirmPassword fields and ensure strict type compliance
+    const { password, confirmPassword, ...userData } = data;
+    
+    setUsers(prevUsers => prevUsers.map(u => {
+      if (u.id === editingUser.id) {
+        return {
+          ...u,
+          ...userData,
+          // Ensure these fields are preserved or correctly mapped if they differ
+          id: u.id,
+          email: u.email,
+          companyName: u.companyName || u.company || '', // Preserve companyName
+          company: u.company || u.companyName || '', // Preserve company field
+          address: {
+            ...u.address,
+            ...userData.address
+          }
+        };
+      }
+      return u;
+    }));
     
     toast({
       title: 'Usuário atualizado',
@@ -332,8 +403,18 @@ const UserList = () => {
     }
 
     // Security: Hide users from other companies
-    if (currentUser?.role !== 'ADMIN_SISTEMA' && currentUser?.company && user.company !== currentUser.company) {
-      return false;
+    if (currentUser?.role !== 'ADMIN_SISTEMA') {
+      const userCompany = user.companyName || user.company;
+      const myCompany = currentUser?.companyName || currentUser?.company;
+      
+      // If we can't determine companies, be safe and hide unless it's the user themselves
+      if (!userCompany || !myCompany) {
+         return user.id === currentUser?.id;
+      }
+      
+      if (userCompany !== myCompany) {
+         return false;
+      }
     }
 
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -351,12 +432,15 @@ const UserList = () => {
           
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
              <div className="flex items-center gap-4 w-full sm:w-auto">
-                <Input 
-                  placeholder="Buscar por nome ou email..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                />
+                <div className="relative flex-1 w-full sm:w-[300px]">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Buscar por nome ou email..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="!pl-10"
+                  />
+                </div>
                 <Select value={filterRole} onValueChange={setFilterRole}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Filtrar por tipo" />
@@ -366,6 +450,7 @@ const UserList = () => {
                     <SelectItem value="ADMIN_SISTEMA">Admin Sistema</SelectItem>
                     <SelectItem value="ADMIN_EMPRESA">Admin Empresa</SelectItem>
                     <SelectItem value="ADMIN_SETOR">Admin Setor</SelectItem>
+                    <SelectItem value="FUNCIONARIO_SETOR">Funcionário Setor</SelectItem>
                     <SelectItem value="OPERADOR">Operador</SelectItem>
                   </SelectContent>
                 </Select>
@@ -407,7 +492,7 @@ const UserList = () => {
                             {user.role.replace('_', ' ')}
                           </Badge>
                         </TableCell>
-                        <TableCell>{user.company}</TableCell>
+                        <TableCell>{user.companyName || user.company}</TableCell>
                         <TableCell>
                           <Badge variant={user.status === 'active' ? 'outline' : 'secondary'} className={user.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' : ''}>
                             {user.status === 'active' ? 'Ativo' : 'Inativo'}
@@ -536,6 +621,7 @@ const UserList = () => {
                                   <>
                                     <SelectItem value="ADMIN_EMPRESA">Admin Empresa</SelectItem>
                                     <SelectItem value="ADMIN_SETOR">Admin Setor</SelectItem>
+                                    <SelectItem value="FUNCIONARIO_SETOR">Funcionário Setor</SelectItem>
                                   </>
                                 )}
                                 <SelectItem value="OPERADOR">Operador</SelectItem>

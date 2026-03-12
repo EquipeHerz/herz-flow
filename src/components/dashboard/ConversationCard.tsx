@@ -16,7 +16,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { Instagram, Facebook, MessageCircle } from "lucide-react";
+import { Instagram, Facebook, MessageCircle, MessageSquareText } from "lucide-react";
 
 const maskPhone = (raw: string) => {
   const s = String(raw || "");
@@ -42,7 +42,7 @@ export interface Conversation {
   /** Preview/resumo da conversa */
   preview: string;
   /** Origem da conversa (plataforma) */
-  origin: "instagram" | "whatsapp" | "facebook";
+  origin: "instagram" | "whatsapp" | "facebook" | "sms";
   /** Data/hora de origem (opcional, ISO) */
   originTimestamp?: string;
 }
@@ -65,6 +65,7 @@ const ORIGIN_META = {
   whatsapp: { label: "WhatsApp", color: "bg-green-500", icon: MessageCircle },
   instagram: { label: "Instagram", color: "bg-pink-500", icon: Instagram },
   facebook: { label: "Facebook", color: "bg-blue-600", icon: Facebook },
+  sms: { label: "SMS", color: "bg-slate-500", icon: MessageSquareText },
 } as const;
 
 const GridView = ({ conversation, showCompany }: Pick<ConversationCardProps, 'conversation' | 'showCompany'>) => (

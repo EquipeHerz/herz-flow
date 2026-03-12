@@ -91,10 +91,26 @@ export const StyledButton = styled.button.withConfig({
         `;
       case "outline":
         return `
-          border: 1px solid ${theme.colors.input};
-          background-color: ${theme.colors.background};
-          color: inherit;
-          &:hover { background-color: ${theme.colors.accent}; color: ${theme.colors.accentForeground}; }
+          border: 1px solid ${theme.colors.border};
+          background-color: transparent;
+          color: ${theme.colors.foreground};
+          transition: all 0.2s ease-in-out;
+          
+          &:hover { 
+            background-color: ${theme.colors.primary}; 
+            color: ${theme.colors.primaryForeground}; 
+            border-color: ${theme.colors.primary};
+            transform: translateY(-1px);
+            box-shadow: ${theme.shadows.md};
+          }
+
+          /* Dark mode specific adjustments if needed */
+          @media (prefers-color-scheme: dark) {
+            &:hover {
+               background-color: ${theme.colors.primary};
+               color: ${theme.colors.primaryForeground};
+            }
+          }
         `;
       case "secondary":
         return `
