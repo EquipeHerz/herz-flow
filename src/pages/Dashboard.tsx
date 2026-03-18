@@ -29,10 +29,14 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ConversationCard, Conversation } from "@/components/dashboard/ConversationCard";
 import { ConversationFilters } from "@/components/dashboard/ConversationFilters";
+import { FullChatModal } from "@/components/dashboard/FullChatModal";
+import { toast } from "sonner";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface ApiInteraction {
   id: string;
@@ -44,16 +48,17 @@ interface ApiInteraction {
   id_agente?: string;
   time_sended?: string | number | null;
   redesocial?: string;
+  stats_atend?: string;
 }
 
 // Removed UserSession interface, using User from context
 
 const MOCK_CONVERSATIONS: Conversation[] = [
   // ... (keep mock data)
-  { id: "001", clientName: "João Silva", empresa: "Tech Solutions", messages: 342, lastInteraction: "Há 2 horas", date: "2024-01-15", preview: "Preciso de ajuda com reserva...", origin: "instagram", originTimestamp: "2024-01-15T10:30:00" },
-  { id: "002", clientName: "Maria Santos", empresa: "Tech Solutions", messages: 278, lastInteraction: "Há 5 horas", date: "2024-01-15", preview: "Quais são os horários disponíveis?", origin: "whatsapp", originTimestamp: "2024-01-15T09:10:00" },
+  { id: "001", clientName: "João Silva", empresa: "Tech Solutions", messages: 342, lastInteraction: "Há 2 horas", date: "2024-01-15", preview: "Preciso de ajuda com reserva...", origin: "instagram", originTimestamp: "2024-01-15T10:30:00", requiresIntervention: true, interventionReason: "Solicitação direta do cliente" },
+  { id: "002", clientName: "Maria Santos", empresa: "Tech Solutions", messages: 278, lastInteraction: "Há 5 horas", date: "2024-01-15", preview: "Quais são os horários disponíveis?", origin: "whatsapp", originTimestamp: "2024-01-15T09:10:00", status: "FINALIZADO" },
   { id: "003", clientName: "Pedro Costa", empresa: "Hotel Imperial", messages: 189, lastInteraction: "Há 1 dia", date: "2024-01-14", preview: "Gostaria de informações sobre...", origin: "facebook", originTimestamp: "2024-01-14T16:45:00" },
-  { id: "004", clientName: "Ana Oliveira", empresa: "Tech Solutions", messages: 156, lastInteraction: "Há 2 dias", date: "2024-01-13", preview: "Obrigada pelo atendimento!", origin: "instagram", originTimestamp: "2024-01-13T12:00:00" },
+  { id: "004", clientName: "Ana Oliveira", empresa: "Tech Solutions", messages: 156, lastInteraction: "Há 2 dias", date: "2024-01-13", preview: "Obrigada pelo atendimento!", origin: "instagram", originTimestamp: "2024-01-13T12:00:00", requiresIntervention: true, interventionReason: "Sentimento negativo detectado" },
   { id: "005", clientName: "Carlos Mendes", empresa: "Hotel Imperial", messages: 234, lastInteraction: "Há 3 horas", date: "2024-01-15", preview: "Preciso cancelar uma reserva...", origin: "whatsapp", originTimestamp: "2024-01-15T08:20:00" },
   { id: "006", clientName: "Juliana Lima", empresa: "Turismo Aventura", messages: 167, lastInteraction: "Há 6 horas", date: "2024-01-15", preview: "Quais pacotes vocês oferecem?", origin: "facebook", originTimestamp: "2024-01-15T07:50:00" },
   { id: "007", clientName: "Roberto Alves", empresa: "Tech Solutions", messages: 289, lastInteraction: "Há 1 dia", date: "2024-01-14", preview: "Perfeito, muito obrigado!", origin: "whatsapp", originTimestamp: "2024-01-14T11:15:00" },
@@ -74,6 +79,9 @@ const Dashboard = () => {
 
   /** Conversa selecionada para exibir detalhes */
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  
+  /** Conversa ativa no modal de chat completo */
+  const [chatConversation, setChatConversation] = useState<Conversation | null>(null);
   
   /** Página atual da paginação */
   const [currentPage, setCurrentPage] = useState(1);
@@ -222,6 +230,14 @@ const Dashboard = () => {
         // Determine origin from the last interaction or any in the list
         const social = last?.redesocial || list.find(i => i.redesocial)?.redesocial;
 
+        // Determine status from stats_atend (HUMANO, FINALIZADO or IA)
+        // Find the latest status in the interactions
+        const statusInteraction = list.slice().reverse().find(i => i.stats_atend);
+        let status = 'IA';
+        const rawStatus = (statusInteraction?.stats_atend || "IA").toUpperCase();
+        if (rawStatus === "HUMANO") status = "HUMANO";
+        else if (rawStatus === "FINALIZADO") status = "FINALIZADO";
+
         return {
           id: (idx + 1).toString().padStart(3, "0"),
           clientName: phone || "Desconhecido",
@@ -231,7 +247,8 @@ const Dashboard = () => {
           date: dateStr,
           preview: lastMsg || "Sem mensagem",
           origin: getOrigin(social),
-          originTimestamp: originTs
+          originTimestamp: originTs,
+          status: status as 'IA' | 'HUMANO' | 'FINALIZADO'
         };
       });
       setApiConversations(conversations);
@@ -288,6 +305,10 @@ const Dashboard = () => {
     }
 
     const sorted = filtered.slice().sort((a, b) => {
+      // Prioridade máxima para Status HUMANO
+      if (a.status === 'HUMANO' && b.status !== 'HUMANO') return -1;
+      if (b.status === 'HUMANO' && a.status !== 'HUMANO') return 1;
+
       const ta = a.originTimestamp ? Date.parse(a.originTimestamp) : 0;
       const tb = b.originTimestamp ? Date.parse(b.originTimestamp) : 0;
       return tb - ta;
@@ -329,6 +350,19 @@ const Dashboard = () => {
     ];
   }, [session, apiInteractions, apiByPhone]);
 
+  // Prevent body scroll when either modal is open
+  useEffect(() => {
+    if (selectedConversation || chatConversation) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedConversation, chatConversation]);
+
   if (!session) {
     return null;
   }
@@ -339,6 +373,32 @@ const Dashboard = () => {
   }
 
   const showStats = session.role === "ADMIN_SISTEMA" || session.role === "ADMIN_EMPRESA";
+
+  const handleTransferToHuman = () => {
+    if (!selectedConversation) return;
+    
+    // Validar se a conversa realmente requer intervenção
+    if (!selectedConversation.requiresIntervention) {
+      toast.error("Esta conversa não está marcada para intervenção humana.");
+      return;
+    }
+
+    toast.success("Solicitação de atendimento humano iniciada com sucesso!");
+    // Aqui entraria a lógica de integração com o backend para realizar a transferência
+    // Ex: api.post('/conversations/transfer', { id: selectedConversation.id })
+    
+    // Log de auditoria simulado
+    console.log(`[AUDIT] Conversa #${selectedConversation.id} transferida para humano em ${new Date().toISOString()} por ${session?.name || 'Admin'}`);
+    
+    // Fechar modal após ação
+    setSelectedConversation(null);
+  };
+
+  const handleOpenChat = () => {
+    if (!selectedConversation) return;
+    setChatConversation(selectedConversation);
+    setSelectedConversation(null);
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -515,15 +575,18 @@ const Dashboard = () => {
       </main>
 
       {/* Modal de Detalhes da Conversa */}
-      <Dialog open={!!selectedConversation} onOpenChange={() => setSelectedConversation(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
+      <Dialog open={!!selectedConversation} onOpenChange={(open) => !open && setSelectedConversation(null)}>
+        <DialogContent className="max-w-3xl flex flex-col h-[90vh] sm:h-[85vh] p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2 shrink-0">
             <DialogTitle className="text-2xl">
               {session.role === "ADMIN_SISTEMA" && selectedConversation?.clientName
                 ? maskPhone(selectedConversation.clientName)
                 : `Conversa #${selectedConversation?.id}`}
             </DialogTitle>
-            <DialogDescription className="text-base pt-4 space-y-4">
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <DialogDescription className="text-base space-y-4">
               {/* ... (rest of the dialog content - keeping it mostly same but checking role) */}
               {selectedConversation && (
                 <div className="p-3 rounded-lg bg-muted/40 border border-border/50">
@@ -561,9 +624,39 @@ const Dashboard = () => {
               </div>
 
               {/* Histórico da conversa (exemplo simulado) */}
-              <div className="pt-4">
-                <p className="font-semibold text-foreground mb-3">Histórico da Conversa</p>
-                <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
+              <div className="pt-4 flex flex-col h-full">
+                <div className="flex items-center justify-between mb-3 shrink-0">
+                  <p className="font-semibold text-foreground">Histórico da Conversa</p>
+                  
+                  {/* Botão de Solicitação de Atendimento Humano */}
+                  {selectedConversation?.requiresIntervention && (
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={handleTransferToHuman}
+                      className="gap-2 animate-pulse"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Solicitar Atendimento Humano
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Banner de alerta se precisar de intervenção */}
+                {selectedConversation?.requiresIntervention && (
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-4 flex items-start gap-3 shrink-0">
+                    <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-destructive text-sm">Intervenção Humana Necessária</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        O AgenteIA sinalizou esta conversa para atenção. 
+                        Motivo: <span className="font-medium">{selectedConversation.interventionReason}</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3 bg-muted/30 p-4 rounded-lg overflow-y-auto min-h-[200px]">
                   {session.role === "ADMIN_SISTEMA" && selectedConversation && apiByPhone[selectedConversation.clientName]?.length ? (
                     <>
                       {apiByPhone[selectedConversation.clientName].map((item, idx) => (
@@ -611,9 +704,33 @@ const Dashboard = () => {
                 </div>
               </div>
             </DialogDescription>
-          </DialogHeader>
+          </div>
+          <div className="p-6 pt-4 border-t border-border bg-background shrink-0 mt-auto">
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 w-full justify-end">
+              <Button variant="outline" onClick={() => setSelectedConversation(null)}>
+                Fechar
+              </Button>
+              <Button 
+                onClick={handleOpenChat}
+                className="gap-2 bg-primary hover:bg-primary/90"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Abrir Chat Completo
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Chat Completo */}
+      {chatConversation && (
+        <FullChatModal 
+          isOpen={!!chatConversation}
+          onClose={() => setChatConversation(null)}
+          conversation={chatConversation}
+          history={session.role === "ADMIN_SISTEMA" ? (apiByPhone[chatConversation.clientName] || []) : []}
+        />
+      )}
     </div>
   );
 };
