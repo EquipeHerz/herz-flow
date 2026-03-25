@@ -37,6 +37,7 @@ import { ConversationFilters } from "@/components/dashboard/ConversationFilters"
 import { FullChatModal } from "@/components/dashboard/FullChatModal";
 import { toast } from "sonner";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { processHistory, groupMessagesByDay, formatDisplayDate, formatTimeStr } from "@/utils/history";
 
 interface ApiInteraction {
   id: string;
@@ -658,46 +659,60 @@ const Dashboard = () => {
 
                 <div className="space-y-3 bg-muted/30 p-4 rounded-lg overflow-y-auto min-h-[200px]">
                   {session.role === "ADMIN_SISTEMA" && selectedConversation && apiByPhone[selectedConversation.clientName]?.length ? (
-                    <>
-                      {apiByPhone[selectedConversation.clientName].map((item, idx) => (
-                        <div key={`${item.id}-${idx}`} className="space-y-3">
-                          {item.msg && (
-                            <div className="bg-gradient-to-r from-blue-500/10 to-blue-600/10 border-l-4 border-blue-500 p-3 rounded-lg">
-                              <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">Cliente</p>
-                              {(item.tempo ?? item.timestamp) && (
-                                <time
-                                  className="text-[0.7rem] font-medium text-blue-600 dark:text-blue-400 mb-1 block"
-                                  dateTime={toMillis(item.tempo ?? item.timestamp) ? new Date(toMillis(item.tempo ?? item.timestamp) as number).toISOString() : undefined}
-                                >
-                                  {formatHMDate(item.tempo ?? item.timestamp)}
-                                </time>
+                    (() => {
+                      const processed = processHistory(apiByPhone[selectedConversation.clientName]);
+                      const grouped = groupMessagesByDay(processed);
+                      
+                      if (grouped.length === 0) {
+                        return <div className="text-sm text-muted-foreground">Sem histórico disponível.</div>;
+                      }
+
+                      return grouped.map((group) => (
+                        <div key={group.dateStr} className="space-y-4">
+                          <div className="flex justify-center my-4">
+                            <Badge variant="secondary" className="text-xs font-normal bg-muted/50 text-muted-foreground">
+                              {formatDisplayDate(group.dateStr)}
+                            </Badge>
+                          </div>
+                          
+                          {group.messages.map((item) => (
+                            <div key={item.id} className="space-y-3">
+                              {item.sender === 'client' && (
+                                <div className="bg-gradient-to-r from-blue-500/10 to-blue-600/10 border-l-4 border-blue-500 p-3 rounded-lg">
+                                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">Cliente</p>
+                                  <time
+                                    className="text-[0.7rem] font-medium text-blue-600 dark:text-blue-400 mb-1 block"
+                                    dateTime={new Date(item.timestamp).toISOString()}
+                                  >
+                                    {formatTimeStr(item.timestamp)}
+                                  </time>
+                                  <p className="text-sm text-foreground whitespace-pre-wrap">{item.text}</p>
+                                </div>
                               )}
-                              <p className="text-sm text-foreground">{item.msg}</p>
-                            </div>
-                          )}
-                          {item.send_msg && (
-                            <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 border-l-4 border-purple-500 p-3 rounded-lg">
-                              <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">
-                                {(() => {
-                                  const rawName = item.id_agente ?? (item as any)["id-agente"] ?? "Bot";
-                                  const lower = String(rawName).toLowerCase();
-                                  return lower.includes("agente") ? rawName : `Agente ${rawName}`;
-                                })()}
-                              </p>
-                              {item.time_sended && (
-                                <time
-                                  className="text-[0.7rem] font-medium text-purple-600 dark:text-purple-400 mb-1 block"
-                                  dateTime={toMillis(item.time_sended) ? new Date(toMillis(item.time_sended) as number).toISOString() : undefined}
-                                >
-                                  {formatHMDate(item.time_sended)}
-                                </time>
+                              
+                              {item.sender === 'agent' && (
+                                <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 border-l-4 border-purple-500 p-3 rounded-lg">
+                                  <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                                    {(() => {
+                                      const rawName = item.agentName || "Bot";
+                                      const lower = String(rawName).toLowerCase();
+                                      return lower.includes("agente") ? rawName : `Agente ${rawName}`;
+                                    })()}
+                                  </p>
+                                  <time
+                                    className="text-[0.7rem] font-medium text-purple-600 dark:text-purple-400 mb-1 block"
+                                    dateTime={new Date(item.timestamp).toISOString()}
+                                  >
+                                    {formatTimeStr(item.timestamp)}
+                                  </time>
+                                  <p className="text-sm text-foreground whitespace-pre-wrap">{item.text}</p>
+                                </div>
                               )}
-                              <p className="text-sm text-foreground">{item.send_msg}</p>
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
-                    </>
+                      ));
+                    })()
                   ) : (
                     <div className="text-sm text-muted-foreground">Sem histórico disponível.</div>
                   )}

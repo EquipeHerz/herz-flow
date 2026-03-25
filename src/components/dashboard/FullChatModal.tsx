@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { X, Send, User, Bot, Phone, Calendar, Clock, UserCheck, Building, CheckCircle, CheckCircle2, MoreVertical, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,19 +13,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-
-// Interface compatível com o formato da API do Dashboard
-interface ApiInteraction {
-  id: string;
-  from: string;
-  msg?: string;
-  send_msg?: string;
-  timestamp?: string | number;
-  tempo?: string | number;
-  id_agente?: string;
-  time_sended?: string | number | null;
-  redesocial?: string;
-}
+import { 
+  ApiInteraction, 
+  processHistory, 
+  groupMessagesByDay, 
+  formatDisplayDate,
+  formatTimeStr
+} from "@/utils/history";
 
 interface FullChatModalProps {
   isOpen: boolean;
@@ -51,18 +45,6 @@ const formatDateTime = (timestamp: string | number | undefined | null) => {
   });
 };
 
-const toMillis = (v: any): number | null => {
-    if (v === null || v === undefined) return null;
-    if (typeof v === "number") return v < 1e12 ? v * 1000 : v;
-    if (typeof v === "string") {
-      const d = Date.parse(v);
-      if (!isNaN(d)) return d;
-      const n = Number(v);
-      if (!isNaN(n)) return n < 1e12 ? n * 1000 : n;
-    }
-    return null;
-  };
-
 export const FullChatModal = ({ isOpen, onClose, conversation, history: initialHistory }: FullChatModalProps) => {
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -75,16 +57,15 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     setLocalHistory(initialHistory);
   }, [initialHistory]);
 
+  // Process and group the history
+  const groupedHistory = useMemo(() => {
+    const processed = processHistory(localHistory);
+    return groupMessagesByDay(processed);
+  }, [localHistory]);
+
   // Identifica o agente responsável (último agente que falou ou 'IA')
   const lastAgentInteraction = [...localHistory].reverse().find(i => i.send_msg);
   const agentName = lastAgentInteraction?.id_agente || "Assistente Virtual (IA)";
-
-  // Ordena histórico por tempo
-  const sortedHistory = [...localHistory].sort((a, b) => {
-    const ta = toMillis(a.tempo ?? a.timestamp) ?? 0;
-    const tb = toMillis(b.tempo ?? b.timestamp) ?? 0;
-    return ta - tb;
-  });
 
   // Auto-scroll to bottom and body scroll lock
   useEffect(() => {
@@ -286,55 +267,59 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
         <div className="flex-1 relative bg-slate-50 dark:bg-slate-950/50 min-h-0">
           <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
             <div className="space-y-4 p-4 pb-8">
-              {/* Separador de Data */}
-              <div className="flex justify-center my-4">
-                <Badge variant="secondary" className="text-xs font-normal bg-muted/50 text-muted-foreground hover:bg-muted/50">
-                  {new Date(conversation.date).toLocaleDateString()}
-                </Badge>
-              </div>
-
-              {sortedHistory.length === 0 ? (
+              {groupedHistory.length === 0 ? (
                  <div className="text-center text-muted-foreground py-10">
                     Nenhuma mensagem registrada.
                  </div>
               ) : (
-                sortedHistory.map((item, idx) => (
-                  <div key={`${item.id}-${idx}`} className="space-y-4">
-                    {/* Mensagem do Cliente */}
-                    {item.msg && (
-                      <div className="flex justify-start">
-                        <div className="max-w-[70%] bg-white dark:bg-slate-900 border border-border rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
-                           <p className="text-sm text-foreground">{item.msg}</p>
-                           <div className="flex items-center justify-end gap-1 mt-1">
-                              <span className="text-[10px] text-muted-foreground">
-                                {item.tempo || item.timestamp ? new Date(toMillis(item.tempo ?? item.timestamp) as number).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
-                              </span>
-                           </div>
-                        </div>
-                      </div>
-                    )}
+                groupedHistory.map((group) => (
+                  <div key={group.dateStr} className="space-y-4">
+                    {/* Separador de Data */}
+                    <div className="flex justify-center my-4">
+                      <Badge variant="secondary" className="text-xs font-normal bg-muted/50 text-muted-foreground hover:bg-muted/50">
+                        {formatDisplayDate(group.dateStr)}
+                      </Badge>
+                    </div>
 
-                    {/* Mensagem do Agente/Bot */}
-                    {item.send_msg && (
-                      <div className="flex justify-end">
-                        <div className={`max-w-[70%] rounded-2xl rounded-tr-none px-4 py-3 shadow-sm ${
-                           (item.id_agente || '').toLowerCase().includes('ia') || !item.id_agente 
-                           ? 'bg-muted text-foreground' 
-                           : 'bg-primary text-primary-foreground'
-                        }`}>
-                           <p className="text-sm font-medium text-xs opacity-90 mb-0.5">
-                              {item.id_agente || "Agente"}
-                           </p>
-                           <p className="text-sm text-white">{item.send_msg}</p>
-                           <div className="flex items-center justify-end gap-1 mt-1 opacity-70 text-white">
-                              <span className="text-[10px]">
-                                {item.time_sended ? new Date(toMillis(item.time_sended) as number).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
-                              </span>
-                              <CheckCircle className="h-3 w-3" />
-                           </div>
-                        </div>
+                    {group.messages.map((item) => (
+                      <div key={item.id} className="space-y-4">
+                        {/* Mensagem do Cliente */}
+                        {item.sender === 'client' && (
+                          <div className="flex justify-start">
+                            <div className="max-w-[70%] bg-white dark:bg-slate-900 border border-border rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
+                               <p className="text-sm text-foreground whitespace-pre-wrap">{item.text}</p>
+                               <div className="flex items-center justify-end gap-1 mt-1">
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {formatTimeStr(item.timestamp)}
+                                  </span>
+                               </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Mensagem do Agente/Bot */}
+                        {item.sender === 'agent' && (
+                          <div className="flex justify-end">
+                            <div className={`max-w-[70%] rounded-2xl rounded-tr-none px-4 py-3 shadow-sm ${
+                               (item.agentName || '').toLowerCase().includes('ia') || !item.agentName 
+                               ? 'bg-muted text-foreground' 
+                               : 'bg-primary text-primary-foreground'
+                            }`}>
+                               <p className="text-sm font-medium text-xs opacity-90 mb-0.5">
+                                  {item.agentName || "Agente"}
+                               </p>
+                               <p className="text-sm text-white whitespace-pre-wrap">{item.text}</p>
+                               <div className="flex items-center justify-end gap-1 mt-1 opacity-70 text-white">
+                                  <span className="text-[10px]">
+                                    {formatTimeStr(item.timestamp)}
+                                  </span>
+                                  <CheckCircle className="h-3 w-3" />
+                               </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
                 ))
               )}
