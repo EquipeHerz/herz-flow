@@ -73,15 +73,13 @@ const About = () => {
           ))}
         </div>
 
-        {/* Mission Statement (Optional, kept for completeness if needed, but styling adjusted) 
-        <div className="max-w-4xl mx-auto mt-20 p-8 bg-gradient-to-br from-accent/5 to-primary/5 rounded-3xl border border-accent/10 text-center">
-          <h3 className="text-2xl font-bold text-foreground mb-4">Nossa Missão</h3>
-          <p className="text-xl text-foreground/80 font-medium">
-            Ser referência global em atendimento humanizado com Inteligência Artificial, 
-            unindo tecnologia e empatia para criar experiências memoráveis.
+        <div className="max-w-4xl mx-auto mt-16 p-8 bg-gradient-to-br from-accent/5 to-primary/5 rounded-3xl border border-accent/20 text-center">
+          <h3 className="text-2xl font-bold text-foreground mb-6">Nossa Missão</h3>
+          <p className="text-muted-foreground leading-relaxed">
+            Ser referência global em atendimento humanizado com Inteligência Artificial,
+            unindo tecnologia e empatia para criar experiências memoráveis em cada interação.
           </p>
         </div>
-        */}
       </div>
     </section>
   );
