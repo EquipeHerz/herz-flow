@@ -134,6 +134,13 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     return null;
   };
 
+  const normalizeAtendimentoStatus = (raw: unknown): FullChatModalProps["conversation"]["status"] => {
+    const s = String(raw || "").trim().toUpperCase();
+    if (s === "HUMANO") return "HUMANO";
+    if (s === "FINALIZADO") return "FINALIZADO";
+    return "IA";
+  };
+
   const pickLastClientInteraction = (history: ApiInteraction[]) => {
     const candidates = history.filter(i => typeof i.msg === "string" && i.msg.trim() !== "");
     if (!candidates.length) return null;
@@ -144,6 +151,12 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     });
     return ordered[ordered.length - 1];
   };
+
+  useEffect(() => {
+    const lastStatusInteraction = [...localHistory].reverse().find(i => i.stats_atend);
+    const next = normalizeAtendimentoStatus(lastStatusInteraction?.stats_atend);
+    setLocalStatus(next);
+  }, [localHistory]);
 
   const buildSacPayload = (
     base: ApiInteraction,
@@ -431,6 +444,11 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
                 {localStatus === 'FINALIZADO' && (
                   <Badge variant="outline" className="border-green-500 text-green-500 text-[10px] h-5">
                     Finalizado
+                  </Badge>
+                )}
+                {localStatus === 'IA' && (
+                  <Badge variant="secondary" className="text-muted-foreground text-[10px] h-5">
+                    IA
                   </Badge>
                 )}
               </div>
