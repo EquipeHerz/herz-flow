@@ -20,6 +20,27 @@ import {
   formatDisplayDate,
   formatTimeStr
 } from "@/utils/history";
+import { useAuth } from "@/contexts/AuthContext";
+
+type SacWebhookPayload = {
+  id: string | number;
+  sessao?: string;
+  tempo?: string | number;
+  from?: string;
+  msg?: string;
+  id_msg?: string;
+  id_agente?: string;
+  redesocial?: string;
+  empresa?: string;
+  send_msg: string;
+  contato?: string;
+  display_phone?: string;
+  id_sessao?: string;
+  stats_atend?: string;
+  [k: string]: unknown;
+};
+
+type ApiInteractionForSac = ApiInteraction & Partial<SacWebhookPayload>;
 
 interface FullChatModalProps {
   isOpen: boolean;
@@ -46,26 +67,239 @@ const formatDateTime = (timestamp: string | number | undefined | null) => {
 };
 
 export const FullChatModal = ({ isOpen, onClose, conversation, history: initialHistory }: FullChatModalProps) => {
+  const { user } = useAuth();
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
+  const [localStatus, setLocalStatus] = useState<FullChatModalProps["conversation"]["status"]>(conversation.status);
   const [localHistory, setLocalHistory] = useState<ApiInteraction[]>([]);
+  const [hasSentViaChat, setHasSentViaChat] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const localHistoryRef = useRef<ApiInteraction[]>([]);
+  const localStatusRef = useRef<FullChatModalProps["conversation"]["status"]>(conversation.status);
+  const hasSentViaChatRef = useRef(false);
+  const lastActivityAtRef = useRef<number>(Date.now());
+  const processedHistoryRef = useRef<ReturnType<typeof processHistory>>([]);
+  const timeoutsRef = useRef<{ alert?: number; close?: number }>({});
+  const alertContextRef = useRef<{ sentAt: number; historyLength: number; lastClientId: string | null } | null>(null);
   
   // Sincroniza histórico local quando o histórico inicial mudar (prop)
   useEffect(() => {
     setLocalHistory(initialHistory);
+    setHasSentViaChat(false);
+    alertContextRef.current = null;
   }, [initialHistory]);
 
-  // Process and group the history
-  const groupedHistory = useMemo(() => {
-    const processed = processHistory(localHistory);
-    return groupMessagesByDay(processed);
+  useEffect(() => {
+    localHistoryRef.current = localHistory;
   }, [localHistory]);
+
+  useEffect(() => {
+    setLocalStatus(conversation.status);
+  }, [conversation.id, conversation.status]);
+
+  useEffect(() => {
+    localStatusRef.current = localStatus;
+  }, [localStatus]);
+
+  useEffect(() => {
+    hasSentViaChatRef.current = hasSentViaChat;
+  }, [hasSentViaChat]);
+
+  const processedHistory = useMemo(() => processHistory(localHistory), [localHistory]);
+  const groupedHistory = useMemo(() => groupMessagesByDay(processedHistory), [processedHistory]);
+
+  useEffect(() => {
+    processedHistoryRef.current = processedHistory;
+  }, [processedHistory]);
 
   // Identifica o agente responsável (último agente que falou ou 'IA')
   const lastAgentInteraction = [...localHistory].reverse().find(i => i.send_msg);
   const agentName = lastAgentInteraction?.id_agente || "Assistente Virtual (IA)";
+
+  const resolveCurrentAgentName = () => {
+    const name = user?.name || user?.username || user?.email || "Operador";
+    return String(name).trim() || "Operador";
+  };
+
+  const toMillis = (v: unknown): number | null => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === "number") return v < 1e12 ? v * 1000 : v;
+    if (typeof v === "string") {
+      const d = Date.parse(v);
+      if (!isNaN(d)) return d;
+      const n = Number(v);
+      if (!isNaN(n)) return n < 1e12 ? n * 1000 : n;
+    }
+    return null;
+  };
+
+  const pickLastClientInteraction = (history: ApiInteraction[]) => {
+    const candidates = history.filter(i => typeof i.msg === "string" && i.msg.trim() !== "");
+    if (!candidates.length) return null;
+    const ordered = candidates.slice().sort((a, b) => {
+      const am = toMillis(a.tempo ?? a.timestamp) ?? 0;
+      const bm = toMillis(b.tempo ?? b.timestamp) ?? 0;
+      return am - bm;
+    });
+    return ordered[ordered.length - 1];
+  };
+
+  const buildSacPayload = (
+    base: ApiInteraction,
+    sendMsg: string,
+    override?: { stats_atend?: SacWebhookPayload["stats_atend"] }
+  ): SacWebhookPayload => {
+    const b = base as ApiInteractionForSac;
+    const agent = resolveCurrentAgentName();
+    const status = override?.stats_atend ?? localStatus ?? b.stats_atend;
+
+    return {
+      ...b,
+      id: b.id,
+      tempo: new Date().toISOString(),
+      id_agente: agent,
+      ...(status ? { stats_atend: status } : {}),
+      send_msg: sendMsg
+    } satisfies SacWebhookPayload;
+  };
+
+  const postToSac = async (payload: SacWebhookPayload) => {
+    const response = await fetch("https://n8n.srv1025595.hstgr.cloud/webhook/sac", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(text || `HTTP ${response.status}`);
+    }
+  };
+
+  const clearMonitorTimeouts = () => {
+    if (timeoutsRef.current.alert) window.clearTimeout(timeoutsRef.current.alert);
+    if (timeoutsRef.current.close) window.clearTimeout(timeoutsRef.current.close);
+    timeoutsRef.current = {};
+  };
+
+  const lastActivityAt = useMemo(() => {
+    if (!processedHistory.length) return Date.now();
+    return processedHistory[processedHistory.length - 1].timestamp;
+  }, [processedHistory]);
+
+  useEffect(() => {
+    lastActivityAtRef.current = lastActivityAt;
+  }, [lastActivityAt]);
+
+  const sendAutomaticMessage = async (text: string, overrideStatus?: SacWebhookPayload["stats_atend"]) => {
+    const base = pickLastClientInteraction(localHistoryRef.current);
+    if (!base) return false;
+
+    const optimisticId = Date.now().toString();
+    const statusToStore = overrideStatus ?? localStatusRef.current;
+    const optimistic: ApiInteraction = {
+      id: optimisticId,
+      from: conversation.clientName,
+      send_msg: text,
+      time_sended: Date.now(),
+      id_agente: resolveCurrentAgentName(),
+      stats_atend: statusToStore
+    };
+
+    setLocalHistory(prev => [...prev, optimistic]);
+
+    try {
+      const payload = buildSacPayload(base, text, overrideStatus ? { stats_atend: overrideStatus } : undefined);
+      await postToSac(payload);
+      if (overrideStatus === "FINALIZADO") setLocalStatus("FINALIZADO");
+      return true;
+    } catch (error) {
+      console.error("[AutoAtendimento] Falha ao enviar mensagem automática:", error);
+      setLocalHistory(prev => prev.filter(m => m.id !== optimisticId));
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const canMonitor = localStatus === "HUMANO" && hasSentViaChat && localStatus !== "FINALIZADO";
+    if (!canMonitor) {
+      clearMonitorTimeouts();
+      alertContextRef.current = null;
+      return;
+    }
+
+    if (alertContextRef.current && localHistory.length !== alertContextRef.current.historyLength) {
+      alertContextRef.current = null;
+      clearMonitorTimeouts();
+    }
+
+    clearMonitorTimeouts();
+
+    const now = Date.now();
+    const alertCtx = alertContextRef.current;
+
+    if (!alertCtx) {
+      const delay = Math.max(0, lastActivityAt + 5 * 60 * 1000 - now);
+      const baselineActivity = lastActivityAt;
+
+      timeoutsRef.current.alert = window.setTimeout(async () => {
+        const stillCanMonitor = localStatusRef.current === "HUMANO" && hasSentViaChatRef.current && localStatusRef.current !== "FINALIZADO";
+        if (!stillCanMonitor) return;
+        if (alertContextRef.current) return;
+        if (lastActivityAtRef.current !== baselineActivity) return;
+
+        const lastClientIdNow = pickLastClientInteraction(localHistoryRef.current)?.id ?? null;
+        const lastMsgs = processedHistoryRef.current.slice(-6).map(m => ({ sender: m.sender, text: m.text, ts: m.timestamp }));
+        console.info("[AutoAtendimento] Alerta de inatividade (5min)", {
+          conversationId: conversation.id,
+          from: conversation.clientName,
+          empresa: conversation.empresa,
+          lastClientId: lastClientIdNow,
+          lastMsgs
+        });
+
+        const beforeLen = localHistoryRef.current.length;
+        const ok = await sendAutomaticMessage("Sem interação por muito tempo, posso te ajudar em mais alguma coisa ou posso encerrar o atendimento?");
+        if (!ok) return;
+
+        alertContextRef.current = {
+          sentAt: Date.now(),
+          historyLength: beforeLen + 1,
+          lastClientId: lastClientIdNow
+        };
+      }, delay);
+
+      return () => clearMonitorTimeouts();
+    }
+
+    const delay = Math.max(0, alertCtx.sentAt + 2 * 60 * 1000 - now);
+    timeoutsRef.current.close = window.setTimeout(async () => {
+      const stillCanMonitor = localStatusRef.current === "HUMANO" && hasSentViaChatRef.current && localStatusRef.current !== "FINALIZADO";
+      if (!stillCanMonitor) return;
+
+      const ctx = alertContextRef.current;
+      if (!ctx) return;
+      if (localHistoryRef.current.length !== ctx.historyLength) return;
+
+      const currentLastClientId = pickLastClientInteraction(localHistoryRef.current)?.id ?? null;
+      if (currentLastClientId !== ctx.lastClientId) {
+        alertContextRef.current = null;
+        return;
+      }
+
+      console.info("[AutoAtendimento] Encerramento automático (7min)", {
+        conversationId: conversation.id,
+        from: conversation.clientName,
+        empresa: conversation.empresa,
+        lastClientId: ctx.lastClientId
+      });
+
+      await sendAutomaticMessage("Atendimento encerrado automaticamente por inatividade.", "FINALIZADO");
+      alertContextRef.current = null;
+    }, delay);
+
+    return () => clearMonitorTimeouts();
+  }, [localStatus, hasSentViaChat, localHistory.length, lastActivityAt, conversation.id, conversation.clientName, conversation.empresa]);
 
   // Auto-scroll to bottom and body scroll lock
   useEffect(() => {
@@ -93,8 +327,18 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     if (!inputMessage.trim() || isSending) return;
     
     setIsSending(true);
-    const messageText = inputMessage;
+    const messageText = inputMessage.trim();
     setInputMessage(""); // Limpa o input imediatamente para melhor UX
+
+    const base = pickLastClientInteraction(localHistory);
+    if (!base) {
+      toast.error("Não foi possível identificar a última mensagem do contato para montar o envio.");
+      setIsSending(false);
+      setInputMessage(messageText);
+      return;
+    }
+
+    setHasSentViaChat(true);
 
     // Prepara a nova mensagem simulando a resposta da API
     const newMessage: ApiInteraction = {
@@ -102,30 +346,16 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
       from: conversation.clientName, // ou o ID do operador
       send_msg: messageText,
       time_sended: Date.now(),
-      id_agente: "Operador (Você)", // Aqui entraria o nome do usuário logado na vida real
-      stats_atend: conversation.status
+      id_agente: resolveCurrentAgentName(),
+      stats_atend: localStatus
     };
 
     // Adiciona ao histórico local otimista (antes de confirmar com a API)
     setLocalHistory(prev => [...prev, newMessage]);
 
     try {
-      // TODO: Substituir por chamada real à API
-      /*
-      const response = await fetch('/api/messages/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: conversation.id,
-          message: messageText,
-          timestamp: new Date().toISOString()
-        })
-      });
-      if (!response.ok) throw new Error('Falha ao enviar mensagem');
-      */
-      
-      // Simula delay de rede
-      await new Promise(resolve => setTimeout(resolve, 600));
+      const payload = buildSacPayload(base, messageText);
+      await postToSac(payload);
       
       // Opcional: Aqui você pode atualizar o ID da mensagem com o ID real retornado pela API
     } catch (error) {
@@ -140,7 +370,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
   };
 
   const handleFinishChat = async () => {
-    if (isFinishing || conversation.status === 'FINALIZADO') return;
+    if (isFinishing || localStatus === 'FINALIZADO') return;
     
     setIsFinishing(true);
     try {
@@ -193,12 +423,12 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-foreground">{conversation.clientName}</h2>
-                {conversation.status === 'HUMANO' && (
+                {localStatus === 'HUMANO' && (
                   <Badge variant="outline" className="border-orange-500 text-orange-500 text-[10px] h-5">
                     Prioridade Humana
                   </Badge>
                 )}
-                {conversation.status === 'FINALIZADO' && (
+                {localStatus === 'FINALIZADO' && (
                   <Badge variant="outline" className="border-green-500 text-green-500 text-[10px] h-5">
                     Finalizado
                   </Badge>
@@ -231,8 +461,8 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
                  <DropdownMenuContent align="end" className="w-48">
                    <DropdownMenuItem 
                      onClick={handleFinishChat}
-                     disabled={isFinishing || conversation.status === 'FINALIZADO'}
-                     className={`gap-2 cursor-pointer ${conversation.status === 'FINALIZADO' ? 'opacity-50' : 'text-green-600 focus:text-green-700'}`}
+                     disabled={isFinishing || localStatus === 'FINALIZADO'}
+                     className={`gap-2 cursor-pointer ${localStatus === 'FINALIZADO' ? 'opacity-50' : 'text-green-600 focus:text-green-700'}`}
                    >
                      {isFinishing ? (
                        <div className="h-4 w-4 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
@@ -241,7 +471,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
                      )}
                      Finalizar Atendimento
                    </DropdownMenuItem>
-                   {conversation.status !== 'FINALIZADO' && (
+                   {localStatus !== 'FINALIZADO' && (
                      <DropdownMenuItem 
                        className="gap-2 cursor-pointer text-orange-600 focus:text-orange-700"
                        onClick={() => {
@@ -329,7 +559,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
 
         {/* Área de Input */}
         <div className="p-4 bg-background border-t border-border shrink-0 mt-auto">
-          {conversation.status === 'FINALIZADO' ? (
+          {localStatus === 'FINALIZADO' ? (
             <div className="text-center p-2 bg-muted/30 rounded-lg text-sm text-muted-foreground">
               Esta conversa foi finalizada e não pode receber novas mensagens.
             </div>
