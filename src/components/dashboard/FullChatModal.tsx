@@ -71,6 +71,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
+  const [isAssuming, setIsAssuming] = useState(false);
   const [localStatus, setLocalStatus] = useState<FullChatModalProps["conversation"]["status"]>(conversation.status);
   const [localHistory, setLocalHistory] = useState<ApiInteraction[]>([]);
   const [hasSentViaChat, setHasSentViaChat] = useState(false);
@@ -93,10 +94,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
   useEffect(() => {
     localHistoryRef.current = localHistory;
   }, [localHistory]);
-
-  useEffect(() => {
-    setLocalStatus(conversation.status);
-  }, [conversation.id, conversation.status]);
 
   useEffect(() => {
     localStatusRef.current = localStatus;
@@ -154,9 +151,9 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
 
   useEffect(() => {
     const lastStatusInteraction = [...localHistory].reverse().find(i => i.stats_atend);
-    const next = normalizeAtendimentoStatus(lastStatusInteraction?.stats_atend);
+    const next = lastStatusInteraction?.stats_atend ? normalizeAtendimentoStatus(lastStatusInteraction.stats_atend) : normalizeAtendimentoStatus(conversation.status);
     setLocalStatus(next);
-  }, [localHistory]);
+  }, [localHistory, conversation.status]);
 
   const buildSacPayload = (
     base: ApiInteraction,
@@ -187,7 +184,67 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
       const text = await response.text().catch(() => "");
       throw new Error(text || `HTTP ${response.status}`);
     }
+    const ct = response.headers.get("content-type") || "";
+    if (ct.includes("application/json")) {
+      return await response.json().catch(() => null);
+    }
+    return await response.text().catch(() => null);
   };
+
+  const fetchLatestFromApi = async () => {
+    const empresa = conversation.empresa || "Embeddixy";
+    const url = `https://n8n.srv1025595.hstgr.cloud/webhook/bdembeddixy?empresa=${encodeURIComponent(empresa)}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    let data: unknown = null;
+    try {
+      data = await response.json();
+    } catch {
+      const text = await response.text().catch(() => "");
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = [];
+      }
+    }
+
+    const arr = Array.isArray(data) ? data : Array.isArray((data as any)?.data) ? (data as any).data : [];
+    const phone = String(conversation.clientName || "");
+    const list = (arr as ApiInteraction[]).filter((it) => String((it as any)?.from ?? "") === phone);
+
+    const localOptimistic = localHistoryRef.current.filter((it) => !it.msg && !!it.send_msg && !!it.time_sended);
+    const merged = [...list, ...localOptimistic];
+    setLocalHistory(merged);
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!conversation.clientName) return;
+    if (localStatus === "FINALIZADO") return;
+
+    let cancelled = false;
+    const intervalMs = localStatus === "IA" || isAssuming ? 3000 : 10000;
+
+    const tick = async () => {
+      try {
+        await fetchLatestFromApi();
+      } catch (error) {
+        if (!cancelled) console.error("[Polling] Falha ao atualizar status/mensagens:", error);
+      }
+    };
+
+    tick();
+    const id = window.setInterval(tick, intervalMs);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [isOpen, conversation.clientName, conversation.empresa, localStatus, isAssuming]);
 
   const clearMonitorTimeouts = () => {
     if (timeoutsRef.current.alert) window.clearTimeout(timeoutsRef.current.alert);
@@ -336,8 +393,49 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     };
   }, [isOpen, localHistory]); // Atualiza o scroll quando o localHistory mudar
 
+  const handleAssumeConversation = async () => {
+    if (isAssuming) return;
+    if (localStatus !== "IA") return;
+    if (!isOpen) return;
+
+    const base = pickLastClientInteraction(localHistoryRef.current);
+    if (!base) {
+      toast.error("Não foi possível localizar a última interação do contato.");
+      return;
+    }
+
+    setIsAssuming(true);
+
+    try {
+      const payload = buildSacPayload(base, "", { stats_atend: "IA" });
+      const resp = await postToSac(payload);
+      const respStatus = (resp && typeof resp === "object") ? (resp as Record<string, unknown>)["stats_atend"] : undefined;
+      const nextStatus = normalizeAtendimentoStatus(respStatus);
+      if (nextStatus === "HUMANO") {
+        setLocalStatus("HUMANO");
+        return;
+      }
+
+      const start = Date.now();
+      while (Date.now() - start < 30000) {
+        await new Promise((r) => setTimeout(r, 1500));
+        if (!isOpen) return;
+        if (localStatusRef.current === "HUMANO") return;
+      }
+
+      toast.error("Aguardando confirmação do atendimento HUMANO. Tente novamente.");
+    } catch (error) {
+      console.error("[AssumirConversa] Falha:", error);
+      toast.error("Não foi possível assumir a conversa. Tente novamente.");
+    } finally {
+      setIsAssuming(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isSending) return;
+    if (isAssuming) return;
+    if (localStatus === "IA" || localStatus === "FINALIZADO") return;
     
     setIsSending(true);
     const messageText = inputMessage.trim();
@@ -470,38 +568,41 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
                   <span>Responsável: <strong className="text-foreground">{agentName}</strong></span>
                </div>
                
-               <DropdownMenu>
-                 <DropdownMenuTrigger asChild>
-                   <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
-                     <MoreVertical className="h-4 w-4" />
-                   </Button>
-                 </DropdownMenuTrigger>
-                 <DropdownMenuContent align="end" className="w-48">
-                   <DropdownMenuItem 
-                     onClick={handleFinishChat}
-                     disabled={isFinishing || localStatus === 'FINALIZADO'}
-                     className={`gap-2 cursor-pointer ${localStatus === 'FINALIZADO' ? 'opacity-50' : 'text-green-600 focus:text-green-700'}`}
-                   >
-                     {isFinishing ? (
-                       <div className="h-4 w-4 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
-                     ) : (
-                       <CheckCircle2 className="h-4 w-4" />
-                     )}
-                     Finalizar Atendimento
-                   </DropdownMenuItem>
-                   {localStatus !== 'FINALIZADO' && (
+               {localStatus !== 'IA' && (
+                 <DropdownMenu>
+                   <DropdownMenuTrigger asChild>
+                     <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" disabled={isAssuming}>
+                       <MoreVertical className="h-4 w-4" />
+                     </Button>
+                   </DropdownMenuTrigger>
+                   <DropdownMenuContent align="end" className="w-48">
                      <DropdownMenuItem 
-                       className="gap-2 cursor-pointer text-orange-600 focus:text-orange-700"
-                       onClick={() => {
-                         toast.success("Conversa sinalizada para prioridade.");
-                       }}
+                       onClick={handleFinishChat}
+                       disabled={isFinishing || isAssuming || localStatus === 'FINALIZADO'}
+                       className={`gap-2 cursor-pointer ${localStatus === 'FINALIZADO' ? 'opacity-50' : 'text-green-600 focus:text-green-700'}`}
                      >
-                       <Flag className="h-4 w-4" />
-                       Sinalizar Prioridade
+                       {isFinishing ? (
+                         <div className="h-4 w-4 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
+                       ) : (
+                         <CheckCircle2 className="h-4 w-4" />
+                       )}
+                       Finalizar Atendimento
                      </DropdownMenuItem>
-                   )}
-                 </DropdownMenuContent>
-               </DropdownMenu>
+                     {localStatus !== 'FINALIZADO' && (
+                       <DropdownMenuItem 
+                         className="gap-2 cursor-pointer text-orange-600 focus:text-orange-700"
+                         onClick={() => {
+                           toast.success("Conversa sinalizada para prioridade.");
+                         }}
+                         disabled={isAssuming}
+                       >
+                         <Flag className="h-4 w-4" />
+                         Sinalizar Prioridade
+                       </DropdownMenuItem>
+                     )}
+                   </DropdownMenuContent>
+                 </DropdownMenu>
+               )}
              </div>
              
              <div className="flex items-center gap-1">
@@ -581,6 +682,22 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
             <div className="text-center p-2 bg-muted/30 rounded-lg text-sm text-muted-foreground">
               Esta conversa foi finalizada e não pode receber novas mensagens.
             </div>
+          ) : localStatus === 'IA' ? (
+            <div className="flex flex-col items-center justify-center gap-2">
+              <Button 
+                onClick={handleAssumeConversation} 
+                className="gap-2 bg-primary hover:bg-primary/90"
+                disabled={isAssuming}
+              >
+                {isAssuming && (
+                  <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
+                )}
+                Assumir conversa
+              </Button>
+              <span className="text-[10px] text-muted-foreground">
+                Para responder, assuma o atendimento.
+              </span>
+            </div>
           ) : (
             <>
               <div className="flex gap-2 items-end">
@@ -591,14 +708,14 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
                     placeholder="Digite sua mensagem..."
                     className="pr-10 h-10 rounded-full"
-                    disabled={isSending}
+                    disabled={isSending || isAssuming}
                   />
                 </div>
                 <Button 
                    onClick={handleSendMessage} 
                    size="icon" 
                    className="shrink-0 rounded-full h-10 w-10 bg-primary hover:bg-primary/90"
-                   disabled={isSending || !inputMessage.trim()}
+                   disabled={isSending || isAssuming || !inputMessage.trim()}
                 >
                   {isSending ? (
                     <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />

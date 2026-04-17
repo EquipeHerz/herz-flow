@@ -15,7 +15,7 @@
  * @component
  */
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { LayoutGrid, List, MessageSquare, TrendingUp, Users, Calendar, Building, FileText, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -103,7 +103,6 @@ const Dashboard = () => {
   const [apiInteractions, setApiInteractions] = useState<ApiInteraction[]>([]);
   const [apiByPhone, setApiByPhone] = useState<Record<string, ApiInteraction[]>>({});
   const [apiConversations, setApiConversations] = useState<Conversation[]>([]);
-  const lastAssumeHumanAttemptRef = useRef<Record<string, string>>({});
 
   // ... (keep helper functions: toMillis, relativeFromNow, maskPhone, formatHMDate, formatHour, formatDate)
   const toMillis = (v: any): number | null => {
@@ -396,78 +395,9 @@ const Dashboard = () => {
     setSelectedConversation(null);
   };
 
-  const handleOpenChat = async () => {
+  const handleOpenChat = () => {
     if (!selectedConversation) return;
-
-    const resolveCurrentAgentName = () => {
-      const name = session?.name || session?.username || session?.email || "Operador";
-      return String(name).trim() || "Operador";
-    };
-
-    const pickLastUserInteraction = (list: ApiInteraction[]) => {
-      const candidates = list.filter(i => typeof i.msg === "string" && i.msg.trim() !== "");
-      if (!candidates.length) return null;
-      const ordered = candidates.slice().sort((a, b) => {
-        const am = toMillis(a.tempo ?? a.timestamp) ?? 0;
-        const bm = toMillis(b.tempo ?? b.timestamp) ?? 0;
-        return am - bm;
-      });
-      return ordered[ordered.length - 1];
-    };
-
-    const postToSac = async (payload: Record<string, unknown>) => {
-      const response = await fetch("https://n8n.srv1025595.hstgr.cloud/webhook/sac", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(text || `HTTP ${response.status}`);
-      }
-    };
-
-    let nextConversation = selectedConversation;
-
-    if (session.role === "ADMIN_SISTEMA") {
-      const list = apiByPhone[selectedConversation.clientName] || [];
-      const lastUser = pickLastUserInteraction(list);
-      const status = String(lastUser?.stats_atend || "").toUpperCase();
-
-      if (lastUser && status !== "HUMANO") {
-        const key = selectedConversation.clientName;
-        if (lastAssumeHumanAttemptRef.current[key] === lastUser.id) {
-          setChatConversation(nextConversation);
-          setSelectedConversation(null);
-          return;
-        }
-        lastAssumeHumanAttemptRef.current[key] = lastUser.id;
-
-        try {
-          const payload: Record<string, unknown> = {
-            ...(lastUser as unknown as Record<string, unknown>),
-            id: lastUser.id,
-            tempo: new Date().toISOString(),
-            id_agente: resolveCurrentAgentName(),
-            stats_atend: "HUMANO",
-            send_msg: lastUser.send_msg ?? ""
-          };
-          console.info("[AbrirChat] Reenvio para assumir HUMANO", {
-            conversationId: selectedConversation.id,
-            from: selectedConversation.clientName,
-            previousStatus: status || null,
-            id: lastUser.id
-          });
-          await postToSac(payload);
-          nextConversation = { ...selectedConversation, status: "HUMANO" };
-        } catch (error) {
-          console.error("[AbrirChat] Falha ao reenviar para HUMANO:", error);
-          toast.error("Não foi possível assumir o atendimento como HUMANO. O chat será aberto mesmo assim.");
-        }
-      }
-    }
-
-    setChatConversation(nextConversation);
+    setChatConversation(selectedConversation);
     setSelectedConversation(null);
   };
 
