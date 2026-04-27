@@ -27,6 +27,16 @@ export const StyledInput = styled.input`
       0 0 0 4px ${({ theme }) => theme.colors.background};
   }
 
+  &[aria-invalid="true"] {
+    border-color: ${({ theme }) => theme.colors.destructive};
+  }
+
+  &[aria-invalid="true"]:focus-visible {
+    box-shadow:
+      0 0 0 2px ${({ theme }) => theme.colors.destructive},
+      0 0 0 4px ${({ theme }) => theme.colors.background};
+  }
+
   &:disabled { cursor: not-allowed; opacity: 0.5; }
 
   /* File input tweaks */

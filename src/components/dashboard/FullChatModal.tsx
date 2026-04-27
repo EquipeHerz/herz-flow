@@ -26,6 +26,7 @@ type SacWebhookPayload = {
   id: string | number;
   sessao?: string;
   tempo?: string | number;
+  time_sended?: string | number;
   from?: string;
   msg?: string;
   id_msg?: string;
@@ -119,6 +120,11 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     return String(name).trim() || "Operador";
   };
 
+  const resolveCurrentAgentId = () => {
+    const id = String(user?.id ?? "").trim();
+    return id || null;
+  };
+
   const toMillis = (v: unknown): number | null => {
     if (v === null || v === undefined) return null;
     if (typeof v === "number") return v < 1e12 ? v * 1000 : v;
@@ -161,16 +167,24 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     override?: { stats_atend?: SacWebhookPayload["stats_atend"] }
   ): SacWebhookPayload => {
     const b = base as ApiInteractionForSac;
-    const agent = resolveCurrentAgentName();
+    const agentId = resolveCurrentAgentId();
+    if (!agentId) {
+      throw new Error("Usuário autenticado sem ID válido para preencher id_agente.");
+    }
+
+    const normalizedSendMsg = sendMsg.trim();
+    const nowIso = new Date().toISOString();
     const status = override?.stats_atend ?? localStatus ?? b.stats_atend;
 
     return {
       ...b,
       id: b.id,
-      tempo: new Date().toISOString(),
-      id_agente: agent,
+      tempo: nowIso,
+      time_sended: nowIso,
+      id_agente: agentId,
+      msg: normalizedSendMsg !== "" ? normalizedSendMsg : (typeof b.msg === "string" ? b.msg : ""),
       ...(status ? { stats_atend: status } : {}),
-      send_msg: sendMsg
+      send_msg: normalizedSendMsg
     } satisfies SacWebhookPayload;
   };
 
@@ -272,7 +286,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
       from: conversation.clientName,
       send_msg: text,
       time_sended: Date.now(),
-      id_agente: resolveCurrentAgentName(),
+      id_agente: resolveCurrentAgentId() ?? resolveCurrentAgentName(),
       stats_atend: statusToStore
     };
 
@@ -436,6 +450,12 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     if (!inputMessage.trim() || isSending) return;
     if (isAssuming) return;
     if (localStatus === "IA" || localStatus === "FINALIZADO") return;
+
+    const agentId = resolveCurrentAgentId();
+    if (!agentId) {
+      toast.error("Não foi possível identificar o ID do usuário autenticado.");
+      return;
+    }
     
     setIsSending(true);
     const messageText = inputMessage.trim();
@@ -457,7 +477,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
       from: conversation.clientName, // ou o ID do operador
       send_msg: messageText,
       time_sended: Date.now(),
-      id_agente: resolveCurrentAgentName(),
+      id_agente: agentId,
       stats_atend: localStatus
     };
 

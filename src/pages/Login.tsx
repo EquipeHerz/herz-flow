@@ -128,12 +128,19 @@ const Login = () => {
               </Button>
             </form>
 
-            <p className="text-center text-sm text-muted-foreground">
-              Não tem uma conta?{" "}
-              <a href="/" className="font-medium text-accent hover:text-accent/80">
-                Voltar para o site
-              </a>
-            </p>
+            <div className="text-center text-sm text-muted-foreground space-y-2">
+              <p>Não tem uma conta?</p>
+              <p>
+                <a href="/registro/empresa" className="font-medium text-accent hover:text-accent/80">
+                  Registre-se agora
+                </a>
+              </p>
+              <p>
+                <a href="/" className="font-medium text-accent hover:text-accent/80">
+                  Voltar para o site
+                </a>
+              </p>
+            </div>
           </div>
         </div>
 

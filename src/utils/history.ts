@@ -120,8 +120,16 @@ export const processHistory = (interactions: ApiInteraction[]): NormalizedMessag
   console.log(`[ProcessHistory] Iniciando processamento de ${interactions.length} interações`);
 
   interactions.forEach((interaction, index) => {
+    const clientText = interaction.msg?.trim() ?? "";
+    const agentText = interaction.send_msg?.trim() ?? "";
+    const isMirroredAgentPayload =
+      clientText !== "" &&
+      agentText !== "" &&
+      clientText === agentText &&
+      !!interaction.id_agente;
+
     // Mensagem do Cliente
-    if (interaction.msg && interaction.msg.trim() !== "") {
+    if (clientText !== "" && !isMirroredAgentPayload) {
       // Usa 'tempo' ou 'timestamp'
       const rawTempo = interaction.tempo ?? interaction.timestamp;
       let timestamp = normalizeTempo(rawTempo);
@@ -134,7 +142,7 @@ export const processHistory = (interactions: ApiInteraction[]): NormalizedMessag
       messages.push({
         id: `${interaction.id || index}-client`,
         interactionId: interaction.id || String(index),
-        text: interaction.msg,
+        text: clientText,
         sender: 'client',
         timestamp: timestamp,
         dateStr: formatDateStr(timestamp)
@@ -142,7 +150,7 @@ export const processHistory = (interactions: ApiInteraction[]): NormalizedMessag
     }
 
     // Mensagem do Agente/Bot
-    if (interaction.send_msg && interaction.send_msg.trim() !== "") {
+    if (agentText !== "") {
       let timestamp = normalizeTimeSended(interaction.time_sended);
       
       // Se não tiver time_sended válido, usa o tempo do cliente + 1ms para manter a ordem
@@ -160,7 +168,7 @@ export const processHistory = (interactions: ApiInteraction[]): NormalizedMessag
       messages.push({
         id: `${interaction.id || index}-agent`,
         interactionId: interaction.id || String(index),
-        text: interaction.send_msg,
+        text: agentText,
         sender: 'agent',
         agentName: interaction.id_agente || "Assistente Virtual (IA)",
         timestamp: timestamp,

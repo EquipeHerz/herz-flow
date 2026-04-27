@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { features } from "@/config/features";
 
 interface HeaderProps {
   showBackButton?: boolean;
@@ -136,7 +137,7 @@ export const Header = ({ showBackButton = false, title = "Dashboard Herz", subti
                     </Button>
                   </SheetClose>
 
-                  {user.role === 'ADMIN_SISTEMA' && (
+                  {features.management && user.role === 'ADMIN_SISTEMA' && (
                     <SheetClose asChild>
                       <Button 
                         variant={isActive("/listagem-empresas") ? "secondary" : "ghost"} 
@@ -148,7 +149,7 @@ export const Header = ({ showBackButton = false, title = "Dashboard Herz", subti
                     </SheetClose>
                   )}
 
-                  {['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR'].includes(user.role) && (
+                  {features.management && ['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR'].includes(user.role) && (
                     <SheetClose asChild>
                       <Button 
                         variant={isActive("/listagem-usuarios") ? "secondary" : "ghost"} 
@@ -160,7 +161,7 @@ export const Header = ({ showBackButton = false, title = "Dashboard Herz", subti
                     </SheetClose>
                   )}
 
-                  {['ADMIN_SISTEMA', 'ADMIN_EMPRESA'].includes(user.role) && (
+                  {features.management && ['ADMIN_SISTEMA', 'ADMIN_EMPRESA'].includes(user.role) && (
                     <SheetClose asChild>
                       <Button 
                         variant={isActive("/editor-contrato") ? "secondary" : "ghost"} 

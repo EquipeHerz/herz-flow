@@ -15,7 +15,7 @@ Herz Flow is a comprehensive web application designed to streamline the manageme
 
 ### Authentication & Security
 -   **Secure Login**: Role-based authentication system.
--   **Registration**: Separate flows for User and Company registration.
+-   **Registration**: Public registration flow (CNPJ check + company/user) following the same UI pattern as Login (`/registro/empresa` → `/registro/usuario`).
 -   **Role-Based Access Control (RBAC)**:
     -   **System Admin**: Full access to all resources.
     -   **Company Admin**: Manage company-specific data and users.
@@ -25,16 +25,7 @@ Herz Flow is a comprehensive web application designed to streamline the manageme
 
 ### Dashboard & Management
 -   **Dashboard**: Overview of key metrics and statistics (using Recharts).
--   **Company Management**:
-    -   Register new companies.
-    -   List and filter existing companies.
-    -   Manage company details.
--   **User Management**:
-    -   Register new users with specific roles.
-    -   List and manage users.
--   **Contract Editor**:
-    -   Create and edit contracts directly within the application.
-    -   Export capabilities (PDF/Print).
+-   **Company/User/Contract Management**: Available behind a feature flag (can be disabled without deleting code).
 -   **Profile Management**: Update user personal information and settings.
 
 ### UI/UX
@@ -102,6 +93,11 @@ Herz Flow is a comprehensive web application designed to streamline the manageme
     ```bash
     npm run build
     ```
+
+## Feature flags
+
+- `VITE_ENABLE_MANAGEMENT=true` habilita as telas de gestão/cadastros administrativos (usuários, empresas e contratos).
+- Quando desabilitado (padrão), links e atalhos dessas telas não aparecem e as rotas exibem uma tela de funcionalidade desativada.
 
 ## 🤝 Contributing
 

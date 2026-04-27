@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { authService } from './authService';
+import type { UserRole } from '../types/auth';
 
 describe('authService', () => {
   beforeEach(() => {
@@ -47,16 +48,16 @@ describe('authService', () => {
   });
 
   it('should check permissions correctly', () => {
-    const adminSistema = { role: 'ADMIN_SISTEMA' } as any;
-    const adminEmpresa = { role: 'ADMIN_EMPRESA' } as any;
-    const operador = { role: 'OPERADOR' } as any;
+    const adminSistema: { role: UserRole } = { role: 'ADMIN_SISTEMA' };
+    const adminEmpresa: { role: UserRole } = { role: 'ADMIN_EMPRESA' };
+    const operador: { role: UserRole } = { role: 'OPERADOR' };
 
-    expect(authService.hasPermission(adminSistema, 'any', 'create')).toBe(true);
+    expect(authService.hasPermission(adminSistema.role, 'any', 'create')).toBe(true);
     
-    expect(authService.hasPermission(adminEmpresa, 'user', 'create')).toBe(true);
-    expect(authService.hasPermission(adminEmpresa, 'contract', 'read')).toBe(true);
+    expect(authService.hasPermission(adminEmpresa.role, 'user', 'create')).toBe(true);
+    expect(authService.hasPermission(adminEmpresa.role, 'contract', 'read')).toBe(true);
     
-    expect(authService.hasPermission(operador, 'profile', 'read')).toBe(true);
-    expect(authService.hasPermission(operador, 'user', 'create')).toBe(false);
+    expect(authService.hasPermission(operador.role, 'profile', 'read')).toBe(true);
+    expect(authService.hasPermission(operador.role, 'user', 'create')).toBe(false);
   });
 });

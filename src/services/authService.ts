@@ -99,8 +99,8 @@ const MOCK_USERS: User[] = [
 // Mock password validation (simple check)
 const isValidPassword = (password: string) => {
   // Mock check: in reality we would hash and compare
-  // For dev purposes, accept any password >= 3 chars
-  return password.length >= 3; 
+  // For dev purposes, accept any password >= 8 chars
+  return password.length >= 8; 
 };
 
 export const authService = {
@@ -138,24 +138,30 @@ export const authService = {
       throw new Error('E-mail já cadastrado');
     }
 
+    const today = new Date().toISOString().slice(0, 10);
+
     const newUser: User = {
       id: Math.random().toString(36).substr(2, 9),
       name: data.name,
       email: data.email,
-      username: data.username,
-      corporateEmail: data.corporateEmail,
+      username: data.username ?? data.email.split("@")[0],
+      corporateEmail: data.corporateEmail ?? data.email,
       phone: data.phone,
+      phones: data.phones,
       position: data.position,
-      department: data.department,
-      admissionDate: data.admissionDate,
-      cpf: data.document,
-      birthDate: data.birthDate,
+      department: data.department ?? data.companyName ?? "Geral",
+      admissionDate: data.admissionDate ?? today,
+      cpf: data.document ?? "",
+      birthDate: data.birthDate ?? "2000-01-01",
       address: data.address,
       role: data.role,
       status: data.status,
       bio: data.bio || '',
       companyId: data.companyId,
+      companyName: data.companyName,
+      company: data.company,
       sectorId: data.sectorId,
+      cnpj: data.cnpj,
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}`
     };
 
@@ -182,24 +188,30 @@ export const authService = {
       throw new Error('E-mail já cadastrado');
     }
 
+    const today = new Date().toISOString().slice(0, 10);
+
     const newUser: User = {
       id: Math.random().toString(36).substr(2, 9),
       name: data.name,
       email: data.email,
-      username: data.username,
-      corporateEmail: data.corporateEmail,
+      username: data.username ?? data.email.split("@")[0],
+      corporateEmail: data.corporateEmail ?? data.email,
       phone: data.phone,
+      phones: data.phones,
       position: data.position,
-      department: data.department,
-      admissionDate: data.admissionDate,
-      cpf: data.document,
-      birthDate: data.birthDate,
+      department: data.department ?? data.companyName ?? "Geral",
+      admissionDate: data.admissionDate ?? today,
+      cpf: data.document ?? "",
+      birthDate: data.birthDate ?? "2000-01-01",
       address: data.address,
       role: data.role,
       status: data.status,
       bio: data.bio || '',
       companyId: data.companyId,
+      companyName: data.companyName,
+      company: data.company,
       sectorId: data.sectorId,
+      cnpj: data.cnpj,
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}`
     };
 

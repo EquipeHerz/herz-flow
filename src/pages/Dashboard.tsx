@@ -38,6 +38,7 @@ import { FullChatModal } from "@/components/dashboard/FullChatModal";
 import { toast } from "sonner";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { processHistory, groupMessagesByDay, formatDisplayDate, formatTimeStr } from "@/utils/history";
+import { features } from "@/config/features";
 
 interface ApiInteraction {
   id: string;
@@ -412,7 +413,7 @@ const Dashboard = () => {
           <div className="mb-8">
             <h2 className="text-lg font-semibold mb-4 text-foreground">Acesso Rápido</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-              {session.role === 'ADMIN_SISTEMA' && (
+              {features.management && session.role === 'ADMIN_SISTEMA' && (
                 <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full flex items-center justify-center min-h-[120px] sm:min-h-[140px]" onClick={() => navigate('/listagem-empresas')}>
                   <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 gap-2 sm:gap-3 w-full h-full text-center">
                     <div className="p-3 sm:p-4 bg-primary/10 rounded-full text-primary flex items-center justify-center shadow-sm">
@@ -423,7 +424,7 @@ const Dashboard = () => {
                 </Card>
               )}
               
-              {['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR'].includes(session.role) && (
+              {features.management && ['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR'].includes(session.role) && (
                 <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full flex items-center justify-center min-h-[120px] sm:min-h-[140px]" onClick={() => navigate('/listagem-usuarios')}>
                   <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 gap-2 sm:gap-3 w-full h-full text-center">
                     <div className="p-3 sm:p-4 bg-blue-500/10 rounded-full text-blue-500 flex items-center justify-center shadow-sm">
@@ -434,7 +435,7 @@ const Dashboard = () => {
                 </Card>
               )}
 
-              {['ADMIN_SISTEMA', 'ADMIN_EMPRESA'].includes(session.role) && (
+              {features.management && ['ADMIN_SISTEMA', 'ADMIN_EMPRESA'].includes(session.role) && (
                 <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full flex items-center justify-center min-h-[120px] sm:min-h-[140px]" onClick={() => navigate('/editor-contrato')}>
                   <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 gap-2 sm:gap-3 w-full h-full text-center">
                     <div className="p-3 sm:p-4 bg-green-500/10 rounded-full text-green-500 flex items-center justify-center shadow-sm">

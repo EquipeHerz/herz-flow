@@ -188,4 +188,29 @@ All colors MUST be HSL.
   .modal-scroll::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--accent) / 0.8);
   }
+
+  .minimal-scroll {
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
+  }
+
+  .minimal-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .minimal-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .minimal-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.22);
+    border-radius: 999px;
+    border: 0;
+  }
+
+  .minimal-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.35);
+  }
 }

@@ -3,6 +3,7 @@ export type UserRole = 'ADMIN_SISTEMA' | 'ADMIN_EMPRESA' | 'ADMIN_SETOR' | 'FUNC
 export interface Address {
   street: string;
   number: string;
+  complement?: string;
   neighborhood: string;
   city: string;
   state: string;
@@ -16,6 +17,7 @@ export interface User {
   username: string;
   corporateEmail: string;
   phone: string;
+  phones?: string[];
   position: string;
   department: string;
   admissionDate: string;
@@ -32,6 +34,7 @@ export interface User {
   companyName?: string;
   company?: string; // Legacy field
   sectorId?: string;
+  cnpj?: string;
 }
 
 export interface AuthResponse {
@@ -49,20 +52,24 @@ export interface RegisterData {
   email: string;
   password: string;
   phone: string;
-  document: string; // CPF
+  phones?: string[];
+  document?: string; // CPF
   role: UserRole;
   
   // Hierarchy
   companyId?: string;
+  companyName?: string;
+  company?: string;
+  cnpj?: string;
   sectorId?: string;
   
   // Extended fields
-  username: string;
-  corporateEmail: string;
+  username?: string;
+  corporateEmail?: string;
   position: string;
-  department: string;
-  admissionDate: string;
-  birthDate: string;
+  department?: string;
+  admissionDate?: string;
+  birthDate?: string;
   address: Address;
   bio?: string;
   status: 'active' | 'inactive';
