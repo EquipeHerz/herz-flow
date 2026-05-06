@@ -85,7 +85,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
   const timeoutsRef = useRef<{ alert?: number; close?: number }>({});
   const alertContextRef = useRef<{ sentAt: number; historyLength: number; lastClientId: string | null } | null>(null);
   
-  // Sincroniza histórico local quando o histórico inicial mudar (prop)
   useEffect(() => {
     setLocalHistory(initialHistory);
     setHasSentViaChat(false);
@@ -111,7 +110,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     processedHistoryRef.current = processedHistory;
   }, [processedHistory]);
 
-  // Identifica o agente responsável (último agente que falou ou 'IA')
   const lastAgentInteraction = [...localHistory].reverse().find(i => i.send_msg);
   const agentName = lastAgentInteraction?.id_agente || "Assistente Virtual (IA)";
 
@@ -155,6 +153,18 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     return ordered[ordered.length - 1];
   };
 
+  const pickLastInteraction = (history: ApiInteraction[]) => {
+    if (!history.length) return null;
+    const sorted = history.slice().sort((a, b) => {
+      const aClient = toMillis(a.tempo ?? a.timestamp) ?? 0;
+      const aAgent = toMillis((a as any)?.time_sended) ?? 0;
+      const bClient = toMillis(b.tempo ?? b.timestamp) ?? 0;
+      const bAgent = toMillis((b as any)?.time_sended) ?? 0;
+      return Math.max(aClient, aAgent) - Math.max(bClient, bAgent);
+    });
+    return sorted[sorted.length - 1];
+  };
+
   useEffect(() => {
     const lastStatusInteraction = [...localHistory].reverse().find(i => i.stats_atend);
     const next = lastStatusInteraction?.stats_atend ? normalizeAtendimentoStatus(lastStatusInteraction.stats_atend) : normalizeAtendimentoStatus(conversation.status);
@@ -175,6 +185,8 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     const normalizedSendMsg = sendMsg.trim();
     const nowIso = new Date().toISOString();
     const status = override?.stats_atend ?? localStatus ?? b.stats_atend;
+    const sessao = (b.sessao ?? b.id_sessao) as SacWebhookPayload["sessao"];
+    const id_sessao = (b.id_sessao ?? b.sessao) as SacWebhookPayload["id_sessao"];
 
     return {
       ...b,
@@ -182,7 +194,11 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
       tempo: nowIso,
       time_sended: nowIso,
       id_agente: agentId,
-      msg: normalizedSendMsg !== "" ? normalizedSendMsg : (typeof b.msg === "string" ? b.msg : ""),
+      msg: undefined,
+      from: b.from ?? conversation.clientName,
+      empresa: conversation.empresa ?? b.empresa,
+      ...(sessao ? { sessao } : {}),
+      ...(id_sessao ? { id_sessao } : {}),
       ...(status ? { stats_atend: status } : {}),
       send_msg: normalizedSendMsg
     } satisfies SacWebhookPayload;
@@ -232,7 +248,43 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     const list = (arr as ApiInteraction[]).filter((it) => String((it as any)?.from ?? "") === phone);
 
     const localOptimistic = localHistoryRef.current.filter((it) => !it.msg && !!it.send_msg && !!it.time_sended);
-    const merged = [...list, ...localOptimistic];
+    const normalizeStr = (v: unknown) => String(v ?? "").trim();
+    const getTimeMs = (v: unknown) => toMillis(v) ?? null;
+
+    const listDeduped = (() => {
+      const m = new Map<string, ApiInteraction>();
+      for (const it of list) {
+        const key = [
+          normalizeStr(it.id),
+          normalizeStr(it.msg),
+          normalizeStr(it.send_msg),
+          normalizeStr(it.id_agente),
+          normalizeStr(it.time_sended),
+          normalizeStr(it.tempo ?? it.timestamp)
+        ].join("|");
+        if (!m.has(key)) m.set(key, it);
+      }
+      return Array.from(m.values());
+    })();
+
+    const filteredOptimistic = localOptimistic.filter((opt) => {
+      const optText = normalizeStr(opt.send_msg);
+      const optAgent = normalizeStr(opt.id_agente);
+      const optTime = getTimeMs(opt.time_sended);
+      return !listDeduped.some((apiIt) => {
+        const apiText = normalizeStr(apiIt.send_msg);
+        const apiAgent = normalizeStr(apiIt.id_agente);
+        if (!optText || apiText !== optText) return false;
+        if (optAgent && apiAgent && apiAgent !== optAgent) return false;
+        const apiTime = getTimeMs(apiIt.time_sended);
+        if (optTime !== null && apiTime !== null) {
+          return Math.abs(apiTime - optTime) <= 15000;
+        }
+        return true;
+      });
+    });
+
+    const merged = [...listDeduped, ...filteredOptimistic];
     setLocalHistory(merged);
   };
 
@@ -247,9 +299,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     const tick = async () => {
       try {
         await fetchLatestFromApi();
-      } catch (error) {
-        if (!cancelled) console.error("[Polling] Falha ao atualizar status/mensagens:", error);
-      }
+      } catch {}
     };
 
     tick();
@@ -295,10 +345,10 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     try {
       const payload = buildSacPayload(base, text, overrideStatus ? { stats_atend: overrideStatus } : undefined);
       await postToSac(payload);
+      await fetchLatestFromApi().catch(() => {});
       if (overrideStatus === "FINALIZADO") setLocalStatus("FINALIZADO");
       return true;
     } catch (error) {
-      console.error("[AutoAtendimento] Falha ao enviar mensagem automática:", error);
       setLocalHistory(prev => prev.filter(m => m.id !== optimisticId));
       return false;
     }
@@ -333,14 +383,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
         if (lastActivityAtRef.current !== baselineActivity) return;
 
         const lastClientIdNow = pickLastClientInteraction(localHistoryRef.current)?.id ?? null;
-        const lastMsgs = processedHistoryRef.current.slice(-6).map(m => ({ sender: m.sender, text: m.text, ts: m.timestamp }));
-        console.info("[AutoAtendimento] Alerta de inatividade (5min)", {
-          conversationId: conversation.id,
-          from: conversation.clientName,
-          empresa: conversation.empresa,
-          lastClientId: lastClientIdNow,
-          lastMsgs
-        });
 
         const beforeLen = localHistoryRef.current.length;
         const ok = await sendAutomaticMessage("Sem interação por muito tempo, posso te ajudar em mais alguma coisa ou posso encerrar o atendimento?");
@@ -371,13 +413,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
         return;
       }
 
-      console.info("[AutoAtendimento] Encerramento automático (7min)", {
-        conversationId: conversation.id,
-        from: conversation.clientName,
-        empresa: conversation.empresa,
-        lastClientId: ctx.lastClientId
-      });
-
       await sendAutomaticMessage("Atendimento encerrado automaticamente por inatividade.", "FINALIZADO");
       alertContextRef.current = null;
     }, delay);
@@ -385,11 +420,9 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     return () => clearMonitorTimeouts();
   }, [localStatus, hasSentViaChat, localHistory.length, lastActivityAt, conversation.id, conversation.clientName, conversation.empresa]);
 
-  // Auto-scroll to bottom and body scroll lock
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      // Pequeno delay para garantir que a renderização terminou antes do scroll
       setTimeout(() => {
         if (scrollAreaRef.current) {
           const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -405,7 +438,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, localHistory]); // Atualiza o scroll quando o localHistory mudar
+  }, [isOpen, localHistory]);
 
   const handleAssumeConversation = async () => {
     if (isAssuming) return;
@@ -439,7 +472,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
 
       toast.error("Aguardando confirmação do atendimento HUMANO. Tente novamente.");
     } catch (error) {
-      console.error("[AssumirConversa] Falha:", error);
       toast.error("Não foi possível assumir a conversa. Tente novamente.");
     } finally {
       setIsAssuming(false);
@@ -459,7 +491,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     
     setIsSending(true);
     const messageText = inputMessage.trim();
-    setInputMessage(""); // Limpa o input imediatamente para melhor UX
+    setInputMessage("");
 
     const base = pickLastClientInteraction(localHistory);
     if (!base) {
@@ -471,30 +503,25 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
 
     setHasSentViaChat(true);
 
-    // Prepara a nova mensagem simulando a resposta da API
     const newMessage: ApiInteraction = {
       id: Date.now().toString(),
-      from: conversation.clientName, // ou o ID do operador
+      from: conversation.clientName,
       send_msg: messageText,
       time_sended: Date.now(),
       id_agente: agentId,
       stats_atend: localStatus
     };
 
-    // Adiciona ao histórico local otimista (antes de confirmar com a API)
     setLocalHistory(prev => [...prev, newMessage]);
 
     try {
       const payload = buildSacPayload(base, messageText);
       await postToSac(payload);
-      
-      // Opcional: Aqui você pode atualizar o ID da mensagem com o ID real retornado pela API
+      await fetchLatestFromApi().catch(() => {});
     } catch (error) {
-      console.error("Erro ao enviar mensagem:", error);
       toast.error("Não foi possível enviar a mensagem. Tente novamente.");
-      // Em caso de erro, você poderia remover a mensagem otimista ou marcá-la como erro
       setLocalHistory(prev => prev.filter(m => m.id !== newMessage.id));
-      setInputMessage(messageText); // Devolve o texto pro input
+      setInputMessage(messageText);
     } finally {
       setIsSending(false);
     }
@@ -505,33 +532,37 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     
     setIsFinishing(true);
     try {
-      // TODO: Substituir por chamada real à API
-      /*
-      const response = await fetch('/api/conversations/finish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: conversation.id,
-          status: 'FINALIZADO'
-        })
-      });
-      if (!response.ok) throw new Error('Falha ao finalizar atendimento');
-      */
-      
-      // Simula delay de rede
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
+      const agentId = resolveCurrentAgentId();
+      if (!agentId) {
+        toast.error("Não foi possível identificar o ID do usuário autenticado.");
+        return;
+      }
+
+      const base = pickLastInteraction(localHistoryRef.current);
+      if (!base) {
+        toast.error("Não foi possível localizar a última interação para finalizar o atendimento.");
+        return;
+      }
+
+      const optimisticId = `finish-${Date.now()}`;
+      setLocalHistory((prev) => [
+        ...prev,
+        {
+          id: optimisticId,
+          from: conversation.clientName,
+          stats_atend: "FINALIZADO",
+          id_agente: agentId,
+          time_sended: Date.now()
+        }
+      ]);
+
+      const payload = buildSacPayload(base, "", { stats_atend: "FINALIZADO" });
+      await postToSac(payload);
+      await fetchLatestFromApi().catch(() => {});
+
+      setLocalStatus("FINALIZADO");
       toast.success("Atendimento finalizado com sucesso!");
-      
-      // Fecha o modal ou atualiza o estado local para mostrar que acabou
-      // Como não temos um gerenciador de estado global robusto aqui para refletir de volta na lista,
-      // a melhor ação para UX é apenas fechar o modal. Ao reabrir/atualizar, a lista pegará o novo status da API real.
-      setTimeout(() => {
-        onClose();
-      }, 1000);
-      
     } catch (error) {
-      console.error("Erro ao finalizar:", error);
       toast.error("Ocorreu um erro ao finalizar o atendimento.");
     } finally {
       setIsFinishing(false);
@@ -541,8 +572,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] md:h-[85vh] p-0 flex flex-col gap-0 overflow-hidden bg-background">
-        
-        {/* Header da Conversa */}
+
         <div className="bg-muted/40 border-b border-border p-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12 border-2 border-primary/20">
@@ -632,7 +662,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
           </div>
         </div>
 
-        {/* Área de Mensagens */}
         <div className="flex-1 relative bg-slate-50 dark:bg-slate-950/50 min-h-0">
           <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
             <div className="space-y-4 p-4 pb-8">
@@ -643,7 +672,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
               ) : (
                 groupedHistory.map((group) => (
                   <div key={group.dateStr} className="space-y-4">
-                    {/* Separador de Data */}
                     <div className="flex justify-center my-4">
                       <Badge variant="secondary" className="text-xs font-normal bg-muted/50 text-muted-foreground hover:bg-muted/50">
                         {formatDisplayDate(group.dateStr)}
@@ -652,7 +680,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
 
                     {group.messages.map((item) => (
                       <div key={item.id} className="space-y-4">
-                        {/* Mensagem do Cliente */}
                         {item.sender === 'client' && (
                           <div className="flex justify-start">
                             <div className="max-w-[70%] bg-white dark:bg-slate-900 border border-border rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
@@ -666,7 +693,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
                           </div>
                         )}
 
-                        {/* Mensagem do Agente/Bot */}
                         {item.sender === 'agent' && (
                           <div className="flex justify-end">
                             <div className={`max-w-[70%] rounded-2xl rounded-tr-none px-4 py-3 shadow-sm ${
@@ -696,7 +722,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
           </ScrollArea>
         </div>
 
-        {/* Área de Input */}
         <div className="p-4 bg-background border-t border-border shrink-0 mt-auto">
           {localStatus === 'FINALIZADO' ? (
             <div className="text-center p-2 bg-muted/30 rounded-lg text-sm text-muted-foreground">

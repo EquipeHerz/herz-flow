@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN_SISTEMA' | 'ADMIN_EMPRESA' | 'ADMIN_SETOR' | 'FUNCIONARIO_SETOR' | 'OPERADOR';
+export type UserRole = 'ADMIN_SISTEMA' | 'ADMIN_EMPRESA';
 
 export interface Address {
   street: string;
@@ -29,10 +29,9 @@ export interface User {
   bio?: string;
   avatar?: string;
   
-  // Hierarchy fields
   companyId?: string;
   companyName?: string;
-  company?: string; // Legacy field
+  company?: string;
   sectorId?: string;
   cnpj?: string;
 }
@@ -43,7 +42,7 @@ export interface AuthResponse {
 }
 
 export interface LoginCredentials {
-  email: string;
+  login: string;
   password: string;
 }
 
@@ -53,17 +52,15 @@ export interface RegisterData {
   password: string;
   phone: string;
   phones?: string[];
-  document?: string; // CPF
+  document?: string;
   role: UserRole;
   
-  // Hierarchy
   companyId?: string;
   companyName?: string;
   company?: string;
   cnpj?: string;
   sectorId?: string;
   
-  // Extended fields
   username?: string;
   corporateEmail?: string;
   position: string;

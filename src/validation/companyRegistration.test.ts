@@ -20,16 +20,18 @@ describe("companyRegistration", () => {
       nomeFantasia: "",
       webSite: "",
       experiencia: "",
-      endereco: {
-        tipoLogradouro: 1,
-        nomeLogradouro: "",
-        numero: "",
-        complemento: "",
-        bairro: "",
-        municipio: { id: 1, descricao: "", estado: { id: 1, descricao: "", sigla: "" } },
-        cep: "",
-        observacoes: "",
-      },
+      enderecos: [
+        {
+          tipoLogradouro: 1,
+          nomeLogradouro: "",
+          numero: "",
+          complemento: "",
+          bairro: "",
+          municipio: { id: 1, descricao: "", estado: { id: 1, descricao: "", sigla: "" } },
+          cep: "",
+          observacoes: "",
+        },
+      ],
       responsavelLegalNome: "",
       responsavelLegalCPF: "",
       responsavelLegalRG: "",
@@ -39,5 +41,35 @@ describe("companyRegistration", () => {
 
     expect(result.success).toBe(false);
   });
-});
 
+  it("accepts website without protocol", () => {
+    const base = {
+      cnpj: "34.432.780/0001-60",
+      nomeOficial: "Empresa Teste",
+      nomeFantasia: "Empresa Teste",
+      experiencia: "Experiência válida aqui",
+      enderecos: [
+        {
+          tipoLogradouro: 1,
+          nomeLogradouro: "Rua Teste",
+          numero: "123",
+          complemento: "",
+          bairro: "Centro",
+          municipio: { id: 1, descricao: "Cidade", estado: { id: 1, descricao: "Estado", sigla: "RS" } },
+          cep: "96000000",
+          observacoes: "",
+        },
+      ],
+      responsavelLegalNome: "Fulano de Tal",
+      responsavelLegalCPF: "12345678909",
+      responsavelLegalRG: "1234567",
+      responsavelLegalCargo: "Gerente",
+      responsavelLegalEmail: "teste@empresa.com",
+    };
+
+    expect(companyRegistrationSchema.safeParse({ ...base, webSite: "www.empresa.com.br" }).success).toBe(true);
+    expect(companyRegistrationSchema.safeParse({ ...base, webSite: "empresa.com.br" }).success).toBe(true);
+    expect(companyRegistrationSchema.safeParse({ ...base, webSite: "https://empresa.com.br" }).success).toBe(true);
+    expect(companyRegistrationSchema.safeParse({ ...base, webSite: "empresa" }).success).toBe(false);
+  });
+});

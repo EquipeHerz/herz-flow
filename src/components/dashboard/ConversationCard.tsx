@@ -1,19 +1,3 @@
-/**
- * ConversationCard Component
- * 
- * Exibe um cartão de conversa individual no dashboard.
- * Suporta dois modos de visualização: grid (cartão compacto) e list (lista detalhada).
- * 
- * @component
- * @example
- * <ConversationCard
- *   conversation={conversationData}
- *   viewMode="grid"
- *   showCompany={true}
- *   onClick={() => handleClick()}
- * />
- */
-
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Instagram, Facebook, MessageCircle, MessageSquareText, AlertCircle, AlertTriangle, User, Bot, CheckCircle2 } from "lucide-react";
@@ -24,50 +8,28 @@ const maskPhone = (raw: string) => {
   return s.includes("@") ? s.split("@")[0] : s;
 };
 
-/**
- * Interface para os dados de uma conversa
- */
 export interface Conversation {
-  /** ID único da conversa */
   id: string;
-  /** Nome do cliente */
   clientName: string;
-  /** Nome da empresa responsável */
   empresa: string;
-  /** Número total de mensagens na conversa */
   messages: number;
-  /** Texto indicando quando foi a última interação */
   lastInteraction: string;
-  /** Data da conversa no formato YYYY-MM-DD */
   date: string;
-  /** Preview/resumo da conversa */
   preview: string;
-  /** Origem da conversa (plataforma) */
   origin: "instagram" | "whatsapp" | "facebook" | "sms";
-  /** Data/hora de origem (opcional, ISO) */
   originTimestamp?: string;
-  /** Indica se a conversa requer intervenção humana */
   requiresIntervention?: boolean;
-  /** Razão para a solicitação de intervenção */
   interventionReason?: string;
-  /** Status do atendimento */
   status?: 'IA' | 'HUMANO' | 'FINALIZADO';
 }
 
 interface ConversationCardProps {
-  /** Dados da conversa a serem exibidos */
   conversation: Conversation;
-  /** Modo de visualização: 'grid' (grade) ou 'list' (lista) */
   viewMode: "grid" | "list";
-  /** Se deve mostrar o nome da empresa (para usuários admin) */
   showCompany?: boolean;
-  /** Função chamada ao clicar no cartão */
   onClick: () => void;
 }
 
-/**
- * Renderiza o cartão no modo Grid (visualização em grade compacta)
- */
 const ORIGIN_META = {
   whatsapp: { label: "WhatsApp", color: "bg-green-500", icon: MessageCircle },
   instagram: { label: "Instagram", color: "bg-pink-500", icon: Instagram },
@@ -81,7 +43,6 @@ const GridView = ({ conversation, showCompany }: Pick<ConversationCardProps, 'co
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-accent">#{conversation.id}</span>
         
-        {/* Priorização Visual para Status HUMANO */}
         {conversation.status === 'HUMANO' && (
           <TooltipProvider>
             <Tooltip>
@@ -146,15 +107,11 @@ const GridView = ({ conversation, showCompany }: Pick<ConversationCardProps, 'co
   </div>
 );
 
-/**
- * Renderiza o cartão no modo List (visualização em lista detalhada)
- */
 const ListView = ({ conversation, showCompany }: Pick<ConversationCardProps, 'conversation' | 'showCompany'>) => (
   <div className="flex flex-col h-full">
     <div className="flex items-center gap-3 mb-2">
       <span className="text-sm font-medium text-accent">#{conversation.id}</span>
       
-      {/* Badge de Prioridade Humana */}
       {conversation.status === 'HUMANO' && (
         <Badge variant="outline" className="border-orange-500 bg-orange-50 text-orange-600 gap-1 px-2 py-0.5 text-[10px] animate-pulse">
           <AlertTriangle className="h-3 w-3" />
@@ -162,7 +119,6 @@ const ListView = ({ conversation, showCompany }: Pick<ConversationCardProps, 'co
         </Badge>
       )}
 
-      {/* Badge de Status */}
       {conversation.status === 'FINALIZADO' && (
         <Badge variant="outline" className="border-green-500 bg-green-50 text-green-600 gap-1 px-2 py-0.5 text-[10px]">
           <CheckCircle2 className="h-3 w-3" />
@@ -218,7 +174,6 @@ export const ConversationCard = ({ conversation, viewMode, showCompany = false, 
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      {/* Renderiza a view apropriada baseada no modo selecionado */}
       {viewMode === "grid" ? (
         <GridView conversation={conversation} showCompany={showCompany} />
       ) : (

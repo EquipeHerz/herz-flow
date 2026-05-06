@@ -28,30 +28,56 @@ export const companyCheckSchema = z.object({
   cnpj: z.string().refine(isValidCNPJ, "CNPJ inválido"),
 });
 
+const isValidWebsite = (value: string) => {
+  const v = value.trim();
+  if (!v) return true;
+  if (v.startsWith("http://") || v.startsWith("https://")) {
+    try {
+      const u = new URL(v);
+      return Boolean(u.hostname);
+    } catch {
+      return false;
+    }
+  }
+
+  try {
+    const u = new URL(`https://${v}`);
+    return Boolean(u.hostname) && u.hostname.includes(".");
+  } catch {
+    return false;
+  }
+};
+
+const enderecoSchema = z.object({
+  tipoLogradouro: z.coerce.number().int().optional(),
+  nomeLogradouro: z.string().min(2, "Logradouro obrigatório"),
+  numero: z.string().min(1, "Número obrigatório"),
+  complemento: z.string().optional(),
+  bairro: z.string().min(2, "Bairro obrigatório"),
+  municipio: z.object({
+    id: z.coerce.number().int({ message: "Município obrigatório" }),
+    descricao: z.string().min(2, "Município obrigatório"),
+    estado: z.object({
+      id: z.coerce.number().int({ message: "UF inválida" }),
+      descricao: z.string().optional(),
+      sigla: z.string().length(2, "UF deve ter 2 letras"),
+    }),
+  }),
+  cep: z.string().refine((v) => onlyDigits(v).length === 8, "CEP inválido"),
+  observacoes: z.string().optional(),
+});
+
 export const companyRegistrationSchema = z.object({
   cnpj: z.string().refine(isValidCNPJ, "CNPJ inválido"),
   nomeOficial: z.string().min(2, "Nome oficial obrigatório"),
   nomeFantasia: z.string().min(2, "Nome fantasia obrigatório"),
-  webSite: z.string().url("Website inválido").optional().or(z.literal("")),
+  webSite: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => isValidWebsite(v ?? ""), "Website inválido"),
   experiencia: z.string().min(10, "Descreva a experiência (mínimo 10 caracteres)").optional().or(z.literal("")),
-  endereco: z.object({
-    tipoLogradouro: z.coerce.number().int().optional(),
-    nomeLogradouro: z.string().min(2, "Logradouro obrigatório"),
-    numero: z.string().min(1, "Número obrigatório"),
-    complemento: z.string().optional(),
-    bairro: z.string().min(2, "Bairro obrigatório"),
-    municipio: z.object({
-      id: z.coerce.number().int().optional(),
-      descricao: z.string().min(2, "Município obrigatório"),
-      estado: z.object({
-        id: z.coerce.number().int().optional(),
-        descricao: z.string().optional(),
-        sigla: z.string().length(2, "UF deve ter 2 letras"),
-      }),
-    }),
-    cep: z.string().refine((v) => onlyDigits(v).length === 8, "CEP inválido"),
-    observacoes: z.string().optional(),
-  }),
+  enderecos: z.array(enderecoSchema).min(1, "Informe ao menos um endereço"),
   responsavelLegalNome: z.string().min(3, "Nome do responsável obrigatório"),
   responsavelLegalCPF: z.string().refine((v) => onlyDigits(v).length === 11, "CPF inválido"),
   responsavelLegalRG: z.string().optional(),
@@ -61,4 +87,3 @@ export const companyRegistrationSchema = z.object({
 
 export type CompanyCheckValues = z.infer<typeof companyCheckSchema>;
 export type CompanyRegistrationValues = z.infer<typeof companyRegistrationSchema>;
-

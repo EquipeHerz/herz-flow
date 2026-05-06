@@ -16,7 +16,7 @@ describe('History Utils', () => {
     });
 
     it('should parse timestamps in seconds', () => {
-      const millis = parseToMillis(1711378800); // 2024-03-25T15:00:00Z in seconds
+      const millis = parseToMillis(1711378800);
       expect(millis).toBe(1711378800000);
     });
 
@@ -33,7 +33,6 @@ describe('History Utils', () => {
 
   describe('normalizeTempo', () => {
     it('should convert UTC assumed as local by subtracting 3 hours', () => {
-      // 15:00 UTC without Z
       const originalString = '2024-03-25 15:00:00';
       const result = normalizeTempo(originalString);
       
@@ -50,35 +49,32 @@ describe('History Utils', () => {
 
   describe('processHistory', () => {
     it('should split interactions into client and agent messages and sort them by time', () => {
-      const mockInteractions: ApiInteraction[] = [
+      const interactions: ApiInteraction[] = [
         {
           id: '1',
           from: '123',
           msg: 'Hello',
-          tempo: '2024-03-25 15:00:00', // UTC sem Z -> vai subtrair 3h
+          tempo: '2024-03-25 15:00:00',
           send_msg: 'Hi there',
-          time_sended: '2024-03-25 12:05:00', // BR time (já está em BR, não subtrai)
+          time_sended: '2024-03-25 12:05:00',
         }
       ];
 
-      const result = processHistory(mockInteractions);
+      const result = processHistory(interactions);
       
       expect(result).toHaveLength(2);
       
-      // Client message
       expect(result[0].sender).toBe('client');
       expect(result[0].text).toBe('Hello');
       
-      // Agent message
       expect(result[1].sender).toBe('agent');
       expect(result[1].text).toBe('Hi there');
       
-      // Check order (client first because 15:00 UTC -> 12:00 BR, agent is 12:05 BR)
       expect(result[0].timestamp).toBeLessThan(result[1].timestamp);
     });
     
     it('should handle malformed dates gracefully', () => {
-      const mockInteractions: ApiInteraction[] = [
+      const interactions: ApiInteraction[] = [
         {
           id: '1',
           from: '123',
@@ -87,15 +83,15 @@ describe('History Utils', () => {
         }
       ];
 
-      const result = processHistory(mockInteractions);
+      const result = processHistory(interactions);
       expect(result).toHaveLength(1);
-      expect(result[0].timestamp).toBeTypeOf('number'); // Fills with Date.now() fallback
+      expect(result[0].timestamp).toBeTypeOf('number');
     });
   });
 
   describe('groupMessagesByDay', () => {
     it('should group messages by day correctly', () => {
-      const mockInteractions: ApiInteraction[] = [
+      const interactions: ApiInteraction[] = [
         {
           id: '1',
           from: '123',
@@ -110,11 +106,10 @@ describe('History Utils', () => {
         }
       ];
 
-      const messages = processHistory(mockInteractions);
+      const messages = processHistory(interactions);
       const grouped = groupMessagesByDay(messages);
       
       expect(grouped).toHaveLength(2);
-      // Older first
       expect(grouped[0].messages[0].text).toBe('Day 1 msg');
       expect(grouped[1].messages[0].text).toBe('Day 2 msg');
     });

@@ -8,7 +8,6 @@ interface ChatBubbleProps {
   isVisible: boolean;
   size?: 'small' | 'medium' | 'large';
   fadeDuration?: number;
-  arrowDirection?: 'top' | 'bottom' | 'left' | 'right';
   className?: string;
   theme?: 'light' | 'dark';
 }
@@ -20,11 +19,9 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
   isVisible, 
   size = 'large', 
   fadeDuration = 400,
-  arrowDirection,
   className = '',
   theme = 'light' 
 }) => {
-  // Criar objeto bubble compatível com o hook
   const bubble: ChatBubbleData = {
     id,
     text,
@@ -32,18 +29,15 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
     isVisible,
     size,
     fadeDuration,
-    arrowDirection
   };
   const [measuredStyle, setMeasuredStyle] = useState<React.CSSProperties>({});
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Ajusta o tamanho baseado no conteúdo
   useEffect(() => {
     if (contentRef.current) {
       const contentWidth = contentRef.current.scrollWidth;
       const contentHeight = contentRef.current.scrollHeight;
       
-      // Calcula tamanho ideal com base no conteúdo
       const padding = bubble.size === 'small' ? 12 : bubble.size === 'large' ? 20 : 16;
       const minWidth = bubble.size === 'small' ? 100 : bubble.size === 'large' ? 160 : 130;
       const maxWidth = bubble.size === 'small' ? 140 : bubble.size === 'large' ? 220 : 180;
@@ -60,7 +54,6 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
     }
   }, [bubble.text, bubble.size]);
 
-  // Estilos estilo WhatsApp com cantos arredondados
   const getSizeClasses = () => {
     const base = 'rounded-2xl shadow-lg border-0 backdrop-blur-none';
     const sizeClasses = {
@@ -69,7 +62,6 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
       large: 'text-sm px-5 py-4'
     };
     
-    // Cores estilo WhatsApp - azul suave
     const themeClasses = theme === 'dark' 
       ? 'bg-blue-500 text-white'
       : 'bg-blue-100 text-gray-800';
@@ -77,23 +69,13 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
     return `${base} ${sizeClasses[bubble.size]} ${themeClasses}`;
   };
 
-  // Estilos para os pontos de digitação
-  const getDotSize = () => {
-    switch (bubble.size) {
-      case 'small': return 'w-1.5 h-1.5';
-      case 'large': return 'w-2.5 h-2.5';
-      default: return 'w-2 h-2';
-    }
-  };
-
-  // Posicionamento da seta baseado na posição do balão
   const getArrowPosition = () => {
     const angle = bubble.position;
     
-    if (angle >= 315 || angle < 45) return 'bottom'; // Topo
-    if (angle >= 45 && angle < 135) return 'left'; // Direita
-    if (angle >= 135 && angle < 225) return 'top'; // Baixo
-    return 'right'; // Esquerda
+    if (angle >= 315 || angle < 45) return 'bottom';
+    if (angle >= 45 && angle < 135) return 'left';
+    if (angle >= 135 && angle < 225) return 'top';
+    return 'right';
   };
 
   const arrowPosition = getArrowPosition();
@@ -109,7 +91,6 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
       aria-label={`Mensagem: ${bubble.text}`}
     >
       <div className={getSizeClasses()}>
-        {/* Conteúdo do texto - estilo WhatsApp simples */}
         <div 
           ref={contentRef}
           className="font-normal text-left leading-relaxed break-words"
@@ -122,7 +103,6 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
         </div>
       </div>
 
-      {/* Seta direcional estilo WhatsApp - mais discreta */}
       <div 
         className={`absolute ${
           arrowPosition === 'bottom' ? 'bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full' :

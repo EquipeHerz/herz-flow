@@ -1,14 +1,3 @@
-/**
- * ContactForm Component
- * 
- * Formulário de contato com validação e feedback via toast.
- * Coleta nome, email, telefone e mensagem do usuário.
- * 
- * @component
- * @example
- * <ContactForm />
- */
-
 import { useState, FormEvent, ChangeEvent } from "react";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,9 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
-/**
- * Interface para os dados do formulário
- */
 interface FormData {
   name: string;
   email: string;
@@ -26,9 +12,6 @@ interface FormData {
   message: string;
 }
 
-/**
- * Estado inicial vazio do formulário
- */
 const initialFormState: FormData = {
   name: "",
   email: "",
@@ -40,20 +23,10 @@ export const ContactForm = () => {
   const { toast } = useToast();
   const [formData, setFormData] = useState<FormData>(initialFormState);
 
-  /**
-   * Atualiza um campo específico do formulário
-   * @param field - Nome do campo a ser atualizado
-   * @param value - Novo valor do campo
-   */
   const updateField = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  /**
-   * Manipula o envio do formulário
-   * Exibe toast de sucesso e reseta o formulário
-   * @param e - Evento de submissão do formulário
-   */
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const to = "pedro.cordeiro@grupoherz.com.br";
@@ -84,7 +57,6 @@ export const ContactForm = () => {
       onSubmit={handleSubmit} 
       className="bg-card p-8 rounded-2xl shadow-lg space-y-6 border border-border/50"
     >
-      {/* Campo de Nome */}
       <div>
         <label className="text-sm font-medium text-foreground mb-2 block">
           Nome
@@ -98,7 +70,6 @@ export const ContactForm = () => {
         />
       </div>
 
-      {/* Campo de Email */}
       <div>
         <label className="text-sm font-medium text-foreground mb-2 block">
           Email
@@ -113,7 +84,6 @@ export const ContactForm = () => {
         />
       </div>
 
-      {/* Campo de Telefone */}
       <div>
         <label className="text-sm font-medium text-foreground mb-2 block">
           Telefone
@@ -127,7 +97,6 @@ export const ContactForm = () => {
         />
       </div>
 
-      {/* Campo de Mensagem */}
       <div>
         <label className="text-sm font-medium text-foreground mb-2 block">
           Mensagem
@@ -142,7 +111,6 @@ export const ContactForm = () => {
         />
       </div>
 
-      {/* Botão de Envio */}
       <Button 
         type="submit" 
         className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold"

@@ -3,11 +3,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export interface ChatBubble {
   id: string;
   text: string;
-  position: number; // ângulo em graus (0-360)
+  position: number;
   size: 'small' | 'medium' | 'large';
   isVisible: boolean;
-  displayTime: number; // tempo de exibição em ms
-  fadeDuration: number; // duração do fade em ms
+  displayTime: number;
+  fadeDuration: number;
 }
 
 interface BubbleConfig {
@@ -15,9 +15,9 @@ interface BubbleConfig {
   maxDisplayTime: number;
   minFadeDuration: number;
   maxFadeDuration: number;
-  radius: number; // raio do círculo em pixels
-  centerX: number; // centro X relativo (0-1)
-  centerY: number; // centro Y relativo (0-1)
+  radius: number;
+  centerX: number;
+  centerY: number;
 }
 
 const defaultConfig: BubbleConfig = {
@@ -34,7 +34,6 @@ export const useChatBubbles = (
   bubbleData: Array<{ id: string; text: string; size?: 'small' | 'medium' | 'large'; angle?: number; distance?: number }>,
   config: Partial<BubbleConfig> = {}
 ) => {
-  // Cria balões estáticos sem animação
   const bubbles: ChatBubble[] = bubbleData.map((data) => ({
     id: data.id,
     text: data.text,
@@ -47,7 +46,6 @@ export const useChatBubbles = (
 
   const mergedConfig = { ...defaultConfig, ...config };
 
-  // Função para calcular posição baseada no ângulo
   const calculatePosition = useCallback((angle: number, radius: number) => {
     const radian = (angle * Math.PI) / 180;
     return {
@@ -56,7 +54,6 @@ export const useChatBubbles = (
     };
   }, []);
 
-  // Função para obter estilos de posicionamento
   const getBubbleStyle = (bubble: ChatBubble) => {
     const position = calculatePosition(bubble.position, mergedConfig.radius);
     const baseSize = bubble.size === 'small' ? '160px' : bubble.size === 'large' ? '220px' : '190px';

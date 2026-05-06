@@ -25,10 +25,10 @@ export type Company = {
   webSite?: string;
   experiencia?: string;
   endereco: CompanyAddress;
+  enderecos?: CompanyAddress[];
   responsavelLegalNome: string;
   responsavelLegalCPF: string;
   responsavelLegalRG?: string;
   responsavelLegalCargo: string;
   responsavelLegalEmail: string;
 };
-

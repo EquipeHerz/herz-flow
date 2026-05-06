@@ -55,6 +55,13 @@ const Profile = () => {
   const { toast } = useToast();
   const [isEditOpen, setIsEditOpen] = useState(false);
 
+  const formatDatePtBr = (value: string | undefined) => {
+    if (!value) return "-";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString("pt-BR");
+  };
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -122,7 +129,6 @@ const Profile = () => {
           <Card className="shadow-lg overflow-hidden border-t-4 border-t-primary">
             <div className="bg-gradient-to-r from-primary/10 to-primary/5 h-32 md:h-48 relative overflow-hidden">
               <FloatingElements className="absolute inset-0" />
-              {/* Avatar moved to CardHeader for better layout control */}
             </div>
             
             <CardHeader className="px-6 md:px-10 pb-6 pt-0">
@@ -153,7 +159,6 @@ const Profile = () => {
             
             <CardContent className="px-6 md:px-10 pb-10 space-y-8">
               
-              {/* Bio Section */}
               {user.bio && (
                 <div className="bg-muted/30 p-4 rounded-lg border border-border/50">
                   <p className="text-muted-foreground italic">"{user.bio}"</p>
@@ -162,7 +167,6 @@ const Profile = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
-                {/* Personal Info */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2 border-b pb-2">
                     <User className="h-5 w-5 text-primary" /> Informações Pessoais
@@ -175,18 +179,15 @@ const Profile = () => {
                     </div>
                     <div className="grid grid-cols-[120px_1fr] items-center gap-2">
                       <Label className="text-muted-foreground">CPF</Label>
-                      <span className="font-medium">{user.cpf}</span>
+                      <span className="font-medium">{user.cpf?.trim() ? user.cpf : "-"}</span>
                     </div>
                     <div className="grid grid-cols-[120px_1fr] items-center gap-2">
                       <Label className="text-muted-foreground">Nascimento</Label>
-                      <span className="font-medium">
-                        {new Date(user.birthDate).toLocaleDateString('pt-BR')}
-                      </span>
+                      <span className="font-medium">{formatDatePtBr(user.birthDate)}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Contact Info */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2 border-b pb-2">
                     <Mail className="h-5 w-5 text-primary" /> Contato
@@ -208,7 +209,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Professional Info */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2 border-b pb-2">
                     <Briefcase className="h-5 w-5 text-primary" /> Dados Profissionais
@@ -221,9 +221,7 @@ const Profile = () => {
                     </div>
                     <div className="grid grid-cols-[120px_1fr] items-center gap-2">
                       <Label className="text-muted-foreground">Admissão</Label>
-                      <span className="font-medium">
-                        {new Date(user.admissionDate).toLocaleDateString('pt-BR')}
-                      </span>
+                      <span className="font-medium">{formatDatePtBr(user.admissionDate)}</span>
                     </div>
                     {user.companyName && (
                       <div className="grid grid-cols-[120px_1fr] items-center gap-2">
@@ -234,7 +232,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Address Info */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2 border-b pb-2">
                     <MapPin className="h-5 w-5 text-primary" /> Endereço
@@ -252,7 +249,6 @@ const Profile = () => {
 
               <Separator />
 
-              {/* Security / Account */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <Shield className="h-5 w-5 text-primary" /> Segurança da Conta
@@ -274,7 +270,6 @@ const Profile = () => {
         </div>
       </main>
 
-      {/* EDIT PROFILE MODAL */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>

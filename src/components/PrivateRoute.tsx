@@ -11,7 +11,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ roles }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
   if (isLoading) {
-    return null; // Or a proper loading spinner
+    return null;
   }
 
   if (!isAuthenticated) {
@@ -19,7 +19,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ roles }) => {
   }
 
   if (roles && user && !roles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />; // Or /unauthorized
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;

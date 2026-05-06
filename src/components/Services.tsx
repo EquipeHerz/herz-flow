@@ -1,21 +1,7 @@
-/**
- * Services Component
- * 
- * Seção principal de serviços da página.
- * Exibe três cartões de serviços: Chatbots, Totens e Painéis de LED.
- * Utiliza o componente ServiceCard para renderização consistente.
- * 
- * @component
- */
-
 import { Bot, Monitor, Lightbulb } from "lucide-react";
 import { ServiceCard } from "./services/ServiceCard";
 
 const Services = () => {
-  /**
-   * Dados dos serviços oferecidos pela empresa
-   * Cada serviço contém: ícone, título, descrição, recursos e cores do gradiente
-   */
   const services = [
     {
       icon: Bot,
@@ -58,7 +44,6 @@ const Services = () => {
   return (
     <section id="services" className="w-full py-24 bg-muted-light/50 dark:bg-muted/30 relative">
       <div className="container mx-auto px-6">
-        {/* Cabeçalho da seção */}
         <div className="text-center space-y-4 mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground">
             Nossas Soluções
@@ -68,7 +53,6 @@ const Services = () => {
           </p>
         </div>
 
-        {/* Grade de serviços */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {services.map((service, index) => (
             <ServiceCard

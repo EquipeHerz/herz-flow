@@ -62,7 +62,6 @@ const Navigation = () => {
             <Logo size="lg" className="transition-transform duration-300 group-hover:scale-105 text-accent" />
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
               <a
@@ -81,7 +80,6 @@ const Navigation = () => {
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             ref={toggleBtnRef}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -93,7 +91,6 @@ const Navigation = () => {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div
             id="mobile-menu"

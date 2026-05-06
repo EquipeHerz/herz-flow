@@ -1,34 +1,5 @@
 import styled from "styled-components";
 
-/**
- * Styled Button
- * 
- * Finalidade:
- * - Fornece um botão estilizado com variantes visuais e tamanhos consistentes com o design system.
- * - Garante acessibilidade (focus-visible) e estados padrão (hover, disabled) em todos os navegadores suportados.
- * 
- * Padrões/Dependências:
- * - Baseado em styled-components com tokens de tema (theme.colors, theme.typography, theme.radii, theme.transitions).
- * - Integração com o ThemeProvider definido em src/styles/global/theme.js.
- * - Tipicamente consumido via o wrapper de UI em src/components/ui/button.tsx.
- * 
- * Variantes disponíveis:
- * - default, destructive, outline, secondary, ghost, link
- * 
- * Tamanhos disponíveis:
- * - default, sm, lg, icon
- * 
- * Valores de retorno:
- * - Componente React (HTMLButtonElement) estilizado, pronto para uso.
- * 
- * Possíveis erros/exceções:
- * - Ausência de ThemeProvider pode causar falta de tokens e estilos inesperados.
- * - Uso de props inválidas ($variant/$size) cai no comportamento padrão (default).
- * 
- * Exemplo de uso:
- *  <StyledButton $variant="outline" $size="lg">Enviar</StyledButton>
- */
-
 type Variant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 type Size = "default" | "sm" | "lg" | "icon";
 
@@ -40,7 +11,6 @@ export interface StyledButtonProps {
 export const StyledButton = styled.button.withConfig({
   shouldForwardProp: (prop) => !["$variant", "$size", "asChild"].includes(String(prop)),
 })<StyledButtonProps>`
-  /* Layout básico e tipografia */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -52,13 +22,10 @@ export const StyledButton = styled.button.withConfig({
   transition: ${({ theme }) => theme.transitions.colors};
   pointer-events: auto;
 
-  /* SVG children matching utility behavior */
   & svg { pointer-events: none; width: 1rem; height: 1rem; flex-shrink: 0; }
 
-  /* Disabled state */
   &:disabled { opacity: 0.5; pointer-events: none; }
 
-  /* Acessibilidade: anel de foco com offset (similar a ring-offset-background) */
   &:focus-visible {
     outline: none;
     box-shadow:
@@ -66,7 +33,6 @@ export const StyledButton = styled.button.withConfig({
       0 0 0 4px ${({ theme }) => theme.colors.background};
   }
 
-  /* Tamanhos (garantir área de toque >= 44px quando possível) */
   ${({ $size }) => {
     switch ($size) {
       case "sm":
@@ -80,7 +46,6 @@ export const StyledButton = styled.button.withConfig({
     }
   }}
 
-  /* Variantes visuais (cores e comportamentos de hover) */
   ${({ $variant, theme }) => {
     switch ($variant) {
       case "destructive":
@@ -103,8 +68,6 @@ export const StyledButton = styled.button.withConfig({
             transform: translateY(-1px);
             box-shadow: ${theme.shadows.md};
           }
-
-          /* Dark mode specific adjustments if needed */
           @media (prefers-color-scheme: dark) {
             &:hover {
                background-color: ${theme.colors.primary};

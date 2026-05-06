@@ -33,7 +33,6 @@ export const Header = ({ showBackButton = false, title = "Dashboard Herz", subti
   const userName = user.name || 'Usuário';
   const userInitials = userName.substring(0, 2).toUpperCase();
 
-  // Helper to determine if a link is active
   const isActive = (path: string) => location.pathname === path;
 
   return (
@@ -89,7 +88,6 @@ export const Header = ({ showBackButton = false, title = "Dashboard Herz", subti
                   <SheetTitle>Menu de Acesso</SheetTitle>
                 </SheetHeader>
                 
-                {/* Profile Section in Menu */}
                 <div className="flex flex-col items-center justify-center mb-8 relative group">
                   <div className="relative">
                     <Avatar className="h-24 w-24 border-4 border-muted">
@@ -115,7 +113,6 @@ export const Header = ({ showBackButton = false, title = "Dashboard Herz", subti
 
                 <Separator className="mb-4" />
 
-                {/* Navigation Links */}
                 <nav className="flex-1 space-y-2">
                   <SheetClose asChild>
                     <Button 
@@ -137,7 +134,19 @@ export const Header = ({ showBackButton = false, title = "Dashboard Herz", subti
                     </Button>
                   </SheetClose>
 
-                  {features.management && user.role === 'ADMIN_SISTEMA' && (
+                  {user.role === "ADMIN_EMPRESA" && (
+                    <SheetClose asChild>
+                      <Button
+                        variant={isActive("/minha-empresa") ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => navigate("/minha-empresa")}
+                      >
+                        <Building className="mr-3 h-4 w-4" /> Empresa
+                      </Button>
+                    </SheetClose>
+                  )}
+
+                  {user.role === 'ADMIN_SISTEMA' && (
                     <SheetClose asChild>
                       <Button 
                         variant={isActive("/listagem-empresas") ? "secondary" : "ghost"} 
@@ -149,7 +158,7 @@ export const Header = ({ showBackButton = false, title = "Dashboard Herz", subti
                     </SheetClose>
                   )}
 
-                  {features.management && ['ADMIN_SISTEMA', 'ADMIN_EMPRESA', 'ADMIN_SETOR'].includes(user.role) && (
+                  {user.role === 'ADMIN_SISTEMA' && (
                     <SheetClose asChild>
                       <Button 
                         variant={isActive("/listagem-usuarios") ? "secondary" : "ghost"} 
@@ -161,7 +170,7 @@ export const Header = ({ showBackButton = false, title = "Dashboard Herz", subti
                     </SheetClose>
                   )}
 
-                  {features.management && ['ADMIN_SISTEMA', 'ADMIN_EMPRESA'].includes(user.role) && (
+                  {features.management && user.role === 'ADMIN_SISTEMA' && (
                     <SheetClose asChild>
                       <Button 
                         variant={isActive("/editor-contrato") ? "secondary" : "ghost"} 

@@ -15,13 +15,11 @@ Herz Flow is a comprehensive web application designed to streamline the manageme
 
 ### Authentication & Security
 -   **Secure Login**: Role-based authentication system.
--   **Registration**: Public registration flow (CNPJ check + company/user) following the same UI pattern as Login (`/registro/empresa` → `/registro/usuario`).
 -   **Role-Based Access Control (RBAC)**:
     -   **System Admin**: Full access to all resources.
     -   **Company Admin**: Manage company-specific data and users.
-    -   **Sector Admin**: Manage users within specific sectors.
-    -   **Standard User**: Access to personal dashboard and profile.
 -   **Protected Routes**: Ensures sensitive pages are only accessible to authorized users.
+ -   **Registration**: Cadastro de empresas/usuários é feito por `ADMIN_SISTEMA` via rotas protegidas (`/registro-empresa` e `/registro-usuario`). Rotas públicas `/registro` redirecionam para `/login`.
 
 ### Dashboard & Management
 -   **Dashboard**: Overview of key metrics and statistics (using Recharts).

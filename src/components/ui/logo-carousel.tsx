@@ -22,18 +22,11 @@ interface LogoColumnProps {
 const LogoColumn: React.FC<LogoColumnProps> = React.memo(
   ({ logos, index, currentTime }) => {
     const cycleInterval = 2500 
-    // Increase stagger to make it look more dynamic and less synced
     const columnDelay = index * 800 
     const adjustedTime = currentTime + columnDelay
-    
-    // Logic to ensure uniqueness across columns at any given moment:
-    // We base the logo index on time, but shift it by 'index' (column number).
-    // This assumes logos.length >= columnCount for perfect uniqueness.
-    
-    // Calculate which cycle we are in for this column
+
     const cycleCount = Math.floor(adjustedTime / cycleInterval)
-    
-    // The base index depends on the cycle count + the column index
+
     const logoIndex = (cycleCount + index) % logos.length
 
     const CurrentLogo = useMemo(() => logos[logoIndex].img, [logos, logoIndex])

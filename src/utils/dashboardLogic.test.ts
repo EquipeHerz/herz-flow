@@ -1,21 +1,18 @@
 import { describe, it, expect } from 'vitest';
 
-// Simulating the deduplication logic used in Dashboard.tsx
 const formatAgentName = (agentId: string | null | undefined): string => {
   if (!agentId) return "Agente Bot";
   const agentStr = String(agentId);
-  // Case insensitive check for "agente" prefix
   return agentStr.toLowerCase().startsWith("agente") ? agentStr : `Agente ${agentStr}`;
 };
 
-// Simulating the origin detection logic used in Dashboard.tsx
 const determineOrigin = (redesocial: string | null | undefined): string => {
   const rawOrigin = String(redesocial || "").toLowerCase();
   
   if (rawOrigin.includes("sms")) return "ayla";
   if (rawOrigin.includes("facebook")) return "facebook";
   if (rawOrigin.includes("instagram")) return "instagram";
-  return "whatsapp"; // Default fallback
+  return "whatsapp";
 };
 
 describe('Agent Name Deduplication Logic', () => {
@@ -58,7 +55,6 @@ describe('Social Media Origin Detection Logic', () => {
     expect(determineOrigin("Whatsapp")).toBe("whatsapp");
     expect(determineOrigin("whatsapp business")).toBe("whatsapp");
     
-    // Default cases
     expect(determineOrigin(null)).toBe("whatsapp");
     expect(determineOrigin(undefined)).toBe("whatsapp");
     expect(determineOrigin("unknown source")).toBe("whatsapp");

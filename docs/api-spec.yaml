@@ -4,8 +4,10 @@ info:
   description: API de autenticação e gestão de usuários para o sistema Herz Flow.
   version: 1.0.0
 servers:
-  - url: http://localhost:3000/api
-    description: Mock Server
+  - url: /api
+    description: Proxy de desenvolvimento (Vite)
+  - url: http://72.60.142.80:9588
+    description: Backend
 
 components:
   securitySchemes:
@@ -17,7 +19,7 @@ components:
   schemas:
     UserRole:
       type: string
-      enum: [ADMIN_SISTEMA, ADMIN_EMPRESA, ADMIN_SETOR, OPERADOR]
+      enum: [ADMIN_SISTEMA, ADMIN_EMPRESA]
     
     User:
       type: object

@@ -27,10 +27,8 @@ const About = () => {
   return (
     <section id="about" className="w-full py-24 bg-background relative">
       <div className="container mx-auto px-6">
-        {/* Top Section: Image and Text */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
           
-          {/* Image Column */}
           <div className="relative">
             <div className="absolute -inset-4 bg-gradient-to-r from-accent/20 to-primary/20 rounded-3xl blur-lg opacity-50" />
             <img
@@ -41,7 +39,6 @@ const About = () => {
             />
           </div>
 
-          {/* Text Column */}
           <div className="space-y-8">
             <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
               Sobre a Herz
@@ -57,7 +54,6 @@ const About = () => {
           </div>
         </div>
 
-        {/* Bottom Section: Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {highlights.map((item, index) => (
             <div

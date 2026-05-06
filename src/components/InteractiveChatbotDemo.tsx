@@ -6,7 +6,6 @@ import { ChatTypingBubble } from './ChatTypingBubble';
 const InteractiveChatbotDemo = () => {
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
-  // Dados dos balões de chat com layout estilo imagem (5 balões principais)
   const chatBubblesData = [
     { id: 'maior-alcance', text: 'Maior alcance de marca', angle: -60, distance: 140 },
     { id: 'atendimento-escalavel', text: 'Atendimento altamente escalável', angle: -120, distance: 150 },
@@ -139,7 +138,6 @@ const InteractiveChatbotDemo = () => {
 
   return (
     <section className="w-full py-16 md:py-24 bg-gradient-to-br from-background to-muted relative overflow-hidden" id="chatbot-demo">
-      {/* Elementos flutuantes decorativos */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-10 left-10 w-20 h-20 bg-accent/10 rounded-full animate-float"></div>
         <div className="absolute bottom-20 right-10 w-16 h-16 bg-primary/10 rounded-full animate-float-delayed"></div>
@@ -156,7 +154,6 @@ const InteractiveChatbotDemo = () => {
       </div>
 
       <div className="container mx-auto px-6 relative z-10">
-        {/* Título da seção */}
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Soluções para <span className="text-accent">Todos os Setores</span>
@@ -167,9 +164,7 @@ const InteractiveChatbotDemo = () => {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Coluna do Robô */}
           <div className="flex flex-col items-center">
-            {/* Robô Animado */}
             <div className="relative mb-8" ref={wrapperRef}>
               <div className="robot-container animate-bounce bg-white dark:bg-gray-50 rounded-full p-4 md:p-6 shadow-xl border-2 border-gray-100 dark:border-gray-200 w-64 h-64 md:w-80 md:h-80 flex items-center justify-center relative">
                 <svg
@@ -179,31 +174,24 @@ const InteractiveChatbotDemo = () => {
                   className="w-56 h-56 md:w-64 md:h-64 robot-svg"
                   aria-label="Robô Animado - Mascote do Chatbot"
                 >
-                  {/* Corpo do robô */}
                   <rect x="60" y="80" width="80" height="60" rx="15" fill="hsl(var(--accent))" className="robot-body" />
                   
-                  {/* Cabeça do robô */}
                   <rect x="70" y="40" width="60" height="50" rx="20" fill="hsl(var(--primary))" className="robot-head" />
                   
-                  {/* Olhos que piscam */}
                   <circle cx="85" cy="60" r="6" fill="white" className="robot-eye robot-eye-left" />
                   <circle cx="115" cy="60" r="6" fill="white" className="robot-eye robot-eye-right" />
                   
-                  {/* Pupilas */}
                   <circle cx="87" cy="62" r="3" fill="hsl(var(--primary-foreground))" className="robot-pupil robot-pupil-left" />
                   <circle cx="117" cy="62" r="3" fill="hsl(var(--primary-foreground))" className="robot-pupil robot-pupil-right" />
                   
-                  {/* Antenas */}
                   <line x1="80" y1="40" x2="80" y2="25" stroke="hsl(var(--accent))" strokeWidth="3" className="robot-antenna" />
                   <line x1="120" y1="40" x2="120" y2="25" stroke="hsl(var(--accent))" strokeWidth="3" className="robot-antenna" />
                   <circle cx="80" cy="22" r="4" fill="hsl(var(--accent))" className="robot-antenna-tip" />
                   <circle cx="120" cy="22" r="4" fill="hsl(var(--accent))" className="robot-antenna-tip" />
                   
-                  {/* Braços */}
                   <rect x="45" y="90" width="15" height="40" rx="7" fill="hsl(var(--secondary))" className="robot-arm robot-arm-left" />
                   <rect x="140" y="90" width="15" height="40" rx="7" fill="hsl(var(--secondary))" className="robot-arm robot-arm-right" />
                   
-                  {/* Mãos */}
                   <circle cx="52" cy="135" r="8" fill="hsl(var(--accent))" className="robot-hand robot-hand-left" />
                   <circle cx="148" cy="135" r="8" fill="hsl(var(--accent))" className="robot-hand robot-hand-right" />
               </svg>
@@ -233,7 +221,6 @@ const InteractiveChatbotDemo = () => {
           
         </div>
 
-          {/* Coluna dos conteúdos explicativos */}
           <div className="space-y-4">
             {contentSections.map((section, index) => (
               <article
@@ -293,7 +280,6 @@ const InteractiveChatbotDemo = () => {
           </div>
         </div>
 
-        {/* Call to Action */}
         <div className="text-center mt-16">
           <button 
             onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
@@ -304,7 +290,6 @@ const InteractiveChatbotDemo = () => {
         </div>
       </div>
 
-      {/* Estilos CSS para animações do robô e balões */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes blink {
           0%, 90%, 100% { opacity: 1; }
