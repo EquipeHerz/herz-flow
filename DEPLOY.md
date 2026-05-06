@@ -37,3 +37,21 @@ Certifique-se de ter o Node.js instalado.
 
 *   O arquivo `vercel.json` já está configurado para lidar com as rotas do React (Single Page Application).
 *   O build do projeto (`npm run build`) foi testado e está funcionando corretamente.
+
+# Deploy na Hostinger (Static)
+
+Para Hostinger (hospedagem de site estático via Apache/Nginx), o artefato de deploy é o diretório `dist/` gerado pelo Vite.
+
+## Passo a Passo
+
+1. Gere o build:
+   ```bash
+   npm run build
+   ```
+
+2. Envie o conteúdo de `dist/` para o diretório público do seu site (geralmente `public_html/`).
+   - Envie os arquivos diretamente dentro de `dist/` (por exemplo, `index.html`, `assets/`, etc.), e não a pasta `dist` inteira dentro de `public_html`.
+
+3. Garanta o fallback de SPA (React Router) no servidor.
+   - Este projeto inclui um `.htaccess` no diretório `public/` para ser copiado ao `dist/` durante o build (Apache).
+   - Se seu plano usar Nginx, configure o equivalente de fallback para `index.html`.
