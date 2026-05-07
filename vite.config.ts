@@ -26,6 +26,32 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     proxy: {
+      "/api/loginBack": {
+        target: "http://72.60.142.80:9588",
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/loginBack/, ""),
+        configure: (proxy) => {
+          if (mode !== "development") return;
+          proxy.on("proxyRes", (proxyRes) => {
+            const setCookie = proxyRes.headers["set-cookie"];
+            if (!setCookie) return;
+            if (Array.isArray(setCookie)) {
+              proxyRes.headers["set-cookie"] = setCookie.map(rewriteSetCookieForHttpDev);
+              return;
+            }
+            if (typeof setCookie === "string") {
+              proxyRes.headers["set-cookie"] = rewriteSetCookieForHttpDev(setCookie);
+            }
+          });
+        },
+      },
+      "/api/utilsBack": {
+        target: "http://72.60.142.80:9589",
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/utilsBack/, ""),
+      },
       "/api": {
         target: "http://72.60.142.80:9588",
         changeOrigin: true,

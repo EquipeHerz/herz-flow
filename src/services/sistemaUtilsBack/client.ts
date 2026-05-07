@@ -6,15 +6,18 @@ export type CreateSistemaUtilsBackClientOptions = {
   debug?: boolean;
 };
 
-export const DEFAULT_SISTEMA_UTILS_BACK_BASE_URL = "http://72.60.142.80:9589";
-export const SISTEMA_UTILS_BACK_DEV_PROXY_BASE_URL = "/utilsapi";
+export const DEFAULT_SISTEMA_UTILS_BACK_BASE_URL = "/api/utilsBack";
+export const SISTEMA_UTILS_BACK_DEV_PROXY_BASE_URL = "/api/utilsBack";
 
 export const createSistemaUtilsBackClient = (options: CreateSistemaUtilsBackClientOptions = {}) => {
-  const baseURL = options.baseURL
-    ? options.baseURL
-    : (import.meta.env.DEV
-        ? SISTEMA_UTILS_BACK_DEV_PROXY_BASE_URL
-        : DEFAULT_SISTEMA_UTILS_BACK_BASE_URL);
+  const baseURL =
+    options.baseURL ??
+    (typeof import.meta.env.VITE_SISTEMA_UTILS_BACK_URL === "string" &&
+    import.meta.env.VITE_SISTEMA_UTILS_BACK_URL.trim()
+      ? import.meta.env.VITE_SISTEMA_UTILS_BACK_URL.trim()
+      : (import.meta.env.DEV
+          ? SISTEMA_UTILS_BACK_DEV_PROXY_BASE_URL
+          : DEFAULT_SISTEMA_UTILS_BACK_BASE_URL));
 
   const debug = options.debug ?? (import.meta.env.VITE_API_DEBUG === "true");
 
@@ -29,4 +32,3 @@ export const createSistemaUtilsBackClient = (options: CreateSistemaUtilsBackClie
     api: new SistemaUtilsBackApi(http),
   };
 };
-

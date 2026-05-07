@@ -8,15 +8,18 @@ export type CreateSistemaLoginBackClientOptions = {
   debug?: boolean;
 };
 
-export const DEFAULT_SISTEMA_LOGIN_BACK_BASE_URL = "http://72.60.142.80:9588";
-export const SISTEMA_LOGIN_BACK_DEV_PROXY_BASE_URL = "/api";
+export const DEFAULT_SISTEMA_LOGIN_BACK_BASE_URL = "/api/loginBack";
+export const SISTEMA_LOGIN_BACK_DEV_PROXY_BASE_URL = "/api/loginBack";
 
 export const createSistemaLoginBackClient = (options: CreateSistemaLoginBackClientOptions = {}) => {
-  const baseURL = options.baseURL
-    ? options.baseURL
-    : import.meta.env.DEV
-      ? SISTEMA_LOGIN_BACK_DEV_PROXY_BASE_URL
-      : (import.meta.env.VITE_SISTEMA_LOGIN_BACK_URL ?? DEFAULT_SISTEMA_LOGIN_BACK_BASE_URL);
+  const baseURL =
+    options.baseURL ??
+    (typeof import.meta.env.VITE_SISTEMA_LOGIN_BACK_URL === "string" &&
+    import.meta.env.VITE_SISTEMA_LOGIN_BACK_URL.trim()
+      ? import.meta.env.VITE_SISTEMA_LOGIN_BACK_URL.trim()
+      : (import.meta.env.DEV
+          ? SISTEMA_LOGIN_BACK_DEV_PROXY_BASE_URL
+          : DEFAULT_SISTEMA_LOGIN_BACK_BASE_URL));
   const debug = options.debug ?? (import.meta.env.VITE_API_DEBUG === "true");
 
   const tokenStore =
