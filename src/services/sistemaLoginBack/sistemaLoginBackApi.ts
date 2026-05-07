@@ -95,6 +95,19 @@ export class SistemaLoginBackApi {
     }
   }
 
+  async updateUserByIdPost(userId: string, payload: Partial<Usuario>): Promise<Usuario | null> {
+    try {
+      const parsedId = z.string().min(1, "ID obrigatório").parse(userId);
+      const response = await this.http.post(`/login/${parsedId}`, payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+      const parsed = usuarioSchema.safeParse(response.data);
+      return parsed.success ? parsed.data : null;
+    } catch (err) {
+      throw ApiError.fromUnknown(err, "Falha ao atualizar usuário.");
+    }
+  }
+
   async unblockUser(userId: string): Promise<void> {
     try {
       await this.http.post(`/login/${userId}/unblock`, undefined);
@@ -198,8 +211,9 @@ export class SistemaLoginBackApi {
   async upsertAdminEmpresa(payload: AdminEmpresaDTO): Promise<RetornoPadrao> {
     try {
       const parsed = adminEmpresaDTOSchema.parse(payload);
+      const usuario = (parsed as any).usuario ?? (parsed as any).Usuario;
       const apiPayload = {
-        usuario: parsed.usuario,
+        Usuario: usuario,
         cnpj: parsed.cnpj,
       };
       const response = await this.http.put("/cadastro/adminempresa", apiPayload, {
@@ -209,6 +223,24 @@ export class SistemaLoginBackApi {
       return retorno.success ? retorno.data : { result: true };
     } catch (err) {
       throw ApiError.fromUnknown(err, "Falha ao cadastrar administrador da empresa.");
+    }
+  }
+
+  async upsertAdminEmpresaPost(payload: AdminEmpresaDTO): Promise<RetornoPadrao> {
+    try {
+      const parsed = adminEmpresaDTOSchema.parse(payload);
+      const usuario = (parsed as any).usuario ?? (parsed as any).Usuario;
+      const apiPayload = {
+        Usuario: usuario,
+        cnpj: parsed.cnpj,
+      };
+      const response = await this.http.post("/cadastro/adminempresa", apiPayload, {
+        headers: { "Content-Type": "application/json" },
+      });
+      const retorno = retornoPadraoSchema.safeParse(response.data);
+      return retorno.success ? retorno.data : { result: true };
+    } catch (err) {
+      throw ApiError.fromUnknown(err, "Falha ao atualizar perfil do usuário.");
     }
   }
 

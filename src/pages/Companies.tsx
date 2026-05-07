@@ -35,6 +35,7 @@ import { companyRegistrationSchema, onlyDigits, type CompanyRegistrationValues }
 import { createSistemaLoginBackClient, type EmpresaModel } from "@/services/sistemaLoginBack";
 import { createSistemaUtilsBackClient, type DescricaoID, type EstadoModel, type MunicipioModel } from "@/services/sistemaUtilsBack";
 import { allowOnlyDigitsKeyDown, digitsOnly, formatCnpj } from "@/utils/inputMasks";
+import { canCreateCompanies } from "@/permissions";
 
 const defaults = (cnpj: string): CompanyRegistrationValues => ({
   cnpj,
@@ -336,9 +337,11 @@ const Companies = () => {
                <Button variant="outline" onClick={exportToPDF} title="Exportar PDF">
                  <FileText className="h-4 w-4 mr-2" /> PDF
                </Button>
-               <Button onClick={handleCreateClick}>
-                 <Plus className="mr-2 h-4 w-4" /> Nova Empresa
-               </Button>
+              {canCreateCompanies(currentUser) && (
+                <Button onClick={handleCreateClick}>
+                  <Plus className="mr-2 h-4 w-4" /> Nova Empresa
+                </Button>
+              )}
              </div>
           </div>
 

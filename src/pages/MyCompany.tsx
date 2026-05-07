@@ -669,8 +669,18 @@ const MyCompany = () => {
                     </CardContent>
                   </Card>
 
-                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold h-11" disabled={loadingEmpresa || !form.formState.isValid}>
-                    {loadingEmpresa ? "Carregando..." : empresaAtual ? "Salvar alterações" : "Cadastrar empresa"}
+                  <Button
+                    type="submit"
+                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold h-11"
+                    disabled={loadingEmpresa || !form.formState.isValid || (!empresaAtual && user?.tipoUsuario === 2)}
+                  >
+                    {loadingEmpresa
+                      ? "Carregando..."
+                      : empresaAtual
+                        ? "Salvar alterações"
+                        : user?.tipoUsuario === 2
+                          ? "Cadastro indisponível"
+                          : "Cadastrar empresa"}
                   </Button>
                 </form>
               </Form>

@@ -25,6 +25,7 @@ export interface User {
   birthDate: string;
   address: Address;
   role: UserRole;
+  tipoUsuario?: number;
   status: 'active' | 'inactive';
   bio?: string;
   avatar?: string;

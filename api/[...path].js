@@ -54,6 +54,17 @@ const applyCors = (req, res) => {
   res.setHeader("access-control-allow-headers", "Content-Type, Authorization");
 };
 
+const tryParseJsonBody = (bodyBuffer) => {
+  if (!bodyBuffer || !Buffer.isBuffer(bodyBuffer) || bodyBuffer.length === 0) return null;
+  const raw = bodyBuffer.toString("utf8").trim();
+  if (!raw || (!raw.startsWith("{") && !raw.startsWith("["))) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
 export default async function handler(req, res) {
   try {
     applyCors(req, res);
@@ -69,7 +80,27 @@ export default async function handler(req, res) {
     const relative = url.startsWith(prefix) ? url.slice(prefix.length) : url;
     const targetUrl = `${backendBase}${relative.startsWith("/") ? relative : `/${relative}`}`;
 
-    const body = await readRequestBody(req);
+    let body = await readRequestBody(req);
+    const method = (req.method ?? "GET").toUpperCase();
+
+    if ((method === "POST" || method === "PUT" || method === "PATCH") && relative.startsWith("/cadastro/adminempresa")) {
+      const parsed = tryParseJsonBody(body);
+      if (parsed && typeof parsed === "object") {
+        const { normalizeAdminEmpresaPayload } = await import("./_lib/normalizeAdminEmpresaPayload.js");
+        const normalized = normalizeAdminEmpresaPayload(parsed);
+        body = Buffer.from(JSON.stringify(normalized.payload));
+        console.log(
+          JSON.stringify({
+            event: "adminempresa_upsert",
+            method,
+            path: relative,
+            passwordAction: normalized.audit.passwordAction,
+            userId: normalized.audit.userId,
+            login: normalized.audit.login,
+          })
+        );
+      }
+    }
 
     const upstream = await fetch(targetUrl, {
       method: req.method,

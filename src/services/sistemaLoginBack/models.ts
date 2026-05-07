@@ -194,10 +194,20 @@ export const empresaModelSchema = z
 
 export const adminEmpresaDTOSchema = z
   .object({
-    usuario: usuarioSchema,
+    usuario: usuarioSchema.optional(),
+    Usuario: usuarioSchema.optional(),
     cnpj: z.string(),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((data, ctx) => {
+    if (!data.usuario && !data.Usuario) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Campo usuario/Usuario obrigatório",
+        path: ["usuario"],
+      });
+    }
+  });
 
 export const recuperaSenhaModelSchema = z
   .object({

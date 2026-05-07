@@ -10,6 +10,7 @@ import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { canCreateUsers } from "@/permissions";
 
 const onlyDigits = (value: string) => value.replace(/\D/g, "");
 
@@ -74,7 +75,7 @@ const UserList = () => {
               </Select>
             </div>
 
-            {currentUser?.role === "ADMIN_SISTEMA" && (
+            {canCreateUsers(currentUser) && (
               <Button onClick={() => navigate("/registro-usuario")}>
                 <Plus className="mr-2 h-4 w-4" /> Novo Usuário
               </Button>

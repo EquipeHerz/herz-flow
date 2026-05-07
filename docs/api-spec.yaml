@@ -59,6 +59,56 @@ components:
           $ref: '#/components/schemas/User'
 
 paths:
+  /cadastro/adminempresa:
+    post:
+      summary: Atualizar usuário (adminempresa)
+      description: |
+        Atualiza dados de usuário e vínculo com empresa.
+
+        Senha é opcional: se `senhaAtual`/`senhaNova` não forem enviados (ou forem vazios), a senha atual é preservada.
+
+        Para alterar a senha, envie `senhaAtual` e `senhaNova` preenchidos.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            examples:
+              semSenha:
+                summary: Atualização sem trocar senha
+                value:
+                  cnpj: "34432780000160"
+                  Usuario:
+                    id: "51395c9d-22be-4b3c-89d4-2402bf8a50fd"
+                    nome: "Nome"
+                    login: "flavia"
+                    email: "flavia_rita_brito@fenix.com.br"
+                    cpf: "89127496333"
+                    datanascimento: "1996-05-04"
+                    aceiteLGPD: true
+                    tipoUsuario: 2
+                    telefones: []
+                    enderecos: []
+              comSenha:
+                summary: Atualização com troca de senha
+                value:
+                  cnpj: "34432780000160"
+                  Usuario:
+                    id: "51395c9d-22be-4b3c-89d4-2402bf8a50fd"
+                    login: "flavia"
+                    senhaAtual: "SenhaAtual@123"
+                    senhaNova: "SenhaNova@1234!"
+      responses:
+        "200":
+          description: Atualização realizada
+        "400":
+          description: Erro de validação
+        "401":
+          description: Não autorizado
+        "500":
+          description: Erro interno
+
   /auth/login:
     post:
       summary: Autenticar usuário

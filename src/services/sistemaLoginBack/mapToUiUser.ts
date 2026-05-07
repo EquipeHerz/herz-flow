@@ -4,6 +4,7 @@ import type { Usuario, TipoUsuarioEnum } from "./models";
 const EMPTY_ADDRESS: User["address"] = {
   street: "",
   number: "",
+  complement: "",
   neighborhood: "",
   city: "",
   state: "",
@@ -26,6 +27,19 @@ export const mapApiUsuarioToUiUser = (usuario: Usuario): User => {
       )}`
     : "";
 
+  const endereco = usuario.enderecos?.[0];
+  const addressFromApi: User["address"] | null = endereco
+    ? {
+        street: endereco.nomeLogradouro ?? "",
+        number: endereco.numero ?? "",
+        complement: endereco.complemento ?? "",
+        neighborhood: endereco.bairro ?? "",
+        city: endereco.municipio?.descricao ?? endereco.municipio?.nome ?? "",
+        state: endereco.municipio?.estado?.sigla ?? "",
+        zipCode: endereco.cep ?? "",
+      }
+    : null;
+
   return {
     id: usuario.id ?? (login ? `api:${login}` : crypto.randomUUID()),
     name: usuario.nome ?? "",
@@ -38,8 +52,9 @@ export const mapApiUsuarioToUiUser = (usuario: Usuario): User => {
     admissionDate: usuario.dataCadastro ? String(usuario.dataCadastro).slice(0, 10) : new Date().toISOString().slice(0, 10),
     cpf: usuario.cpf ?? "",
     birthDate: usuario.dataNascimento ? String(usuario.dataNascimento).slice(0, 10) : "",
-    address: EMPTY_ADDRESS,
+    address: addressFromApi ?? EMPTY_ADDRESS,
     role: mapTipoUsuarioToRole(usuario.tipoUsuario),
+    tipoUsuario: usuario.tipoUsuario,
     status: "active",
     bio: usuario.bio ?? undefined,
   };
