@@ -21,6 +21,16 @@ const toForwardHeaders = (headers) => {
   return out;
 };
 
+const stripCookieDomain = (headerValue) => {
+  if (typeof headerValue !== "string") return headerValue;
+  const parts = headerValue
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => !p.toLowerCase().startsWith("domain="));
+  return parts.join("; ");
+};
+
 export default async function handler(req, res) {
   try {
     const backendBase = process.env.SISTEMA_LOGIN_BACK_URL || "http://72.60.142.80:9588";
@@ -41,7 +51,7 @@ export default async function handler(req, res) {
     res.statusCode = upstream.status;
 
     const setCookie = upstream.headers.get("set-cookie");
-    if (setCookie) res.setHeader("set-cookie", setCookie);
+    if (setCookie) res.setHeader("set-cookie", stripCookieDomain(setCookie));
 
     const contentType = upstream.headers.get("content-type");
     if (contentType) res.setHeader("content-type", contentType);
