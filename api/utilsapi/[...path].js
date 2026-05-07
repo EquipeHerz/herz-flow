@@ -75,9 +75,14 @@ export default async function handler(req, res) {
 
     const buf = Buffer.from(await upstream.arrayBuffer());
     res.end(buf);
-  } catch {
+  } catch (err) {
     res.statusCode = 502;
     res.setHeader("content-type", "application/json; charset=utf-8");
-    res.end(JSON.stringify({ message: "Falha ao encaminhar requisição para o backend utils." }));
+    res.end(
+      JSON.stringify({
+        message: "Falha ao encaminhar requisição para o backend utils.",
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
   }
 }
