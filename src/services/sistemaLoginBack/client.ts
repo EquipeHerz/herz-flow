@@ -8,8 +8,8 @@ export type CreateSistemaLoginBackClientOptions = {
   debug?: boolean;
 };
 
-export const DEFAULT_SISTEMA_LOGIN_BACK_BASE_URL = "/api/loginBack";
-export const SISTEMA_LOGIN_BACK_DEV_PROXY_BASE_URL = "/api/loginBack";
+export const DEFAULT_SISTEMA_LOGIN_BACK_BASE_URL = "/api";
+export const SISTEMA_LOGIN_BACK_DEV_PROXY_BASE_URL = "/api";
 
 export const createSistemaLoginBackClient = (options: CreateSistemaLoginBackClientOptions = {}) => {
   const baseURL =

@@ -6,8 +6,8 @@ export type CreateSistemaUtilsBackClientOptions = {
   debug?: boolean;
 };
 
-export const DEFAULT_SISTEMA_UTILS_BACK_BASE_URL = "/api/utilsBack";
-export const SISTEMA_UTILS_BACK_DEV_PROXY_BASE_URL = "/api/utilsBack";
+export const DEFAULT_SISTEMA_UTILS_BACK_BASE_URL = "/utilsapi";
+export const SISTEMA_UTILS_BACK_DEV_PROXY_BASE_URL = "/utilsapi";
 
 export const createSistemaUtilsBackClient = (options: CreateSistemaUtilsBackClientOptions = {}) => {
   const baseURL =
