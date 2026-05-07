@@ -2,6 +2,12 @@ const readRequestBody = async (req) => {
   const method = (req.method ?? "GET").toUpperCase();
   if (method === "GET" || method === "HEAD") return undefined;
 
+  if (req.body !== undefined) {
+    if (Buffer.isBuffer(req.body)) return req.body;
+    if (typeof req.body === "string") return Buffer.from(req.body);
+    if (typeof req.body === "object") return Buffer.from(JSON.stringify(req.body));
+  }
+
   return await new Promise((resolve, reject) => {
     const chunks = [];
     req.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
@@ -15,7 +21,14 @@ const toForwardHeaders = (headers) => {
   for (const [key, value] of Object.entries(headers ?? {})) {
     if (value == null) continue;
     const lower = key.toLowerCase();
-    if (lower === "host" || lower === "connection") continue;
+    if (
+      lower === "host" ||
+      lower === "connection" ||
+      lower === "content-length" ||
+      lower === "transfer-encoding"
+    ) {
+      continue;
+    }
     out[key] = Array.isArray(value) ? value.join(",") : value;
   }
   return out;
