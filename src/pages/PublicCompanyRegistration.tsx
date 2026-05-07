@@ -62,6 +62,11 @@ const PublicCompanyRegistration = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const apiClient = useMemo(() => createSistemaLoginBackClient(), []);
   const utilsClient = useMemo(() => createSistemaUtilsBackClient(), []);
+  const [companies, setCompanies] = useState<EmpresaModel[]>([]);
+  const [selectedCompanyCnpj, setSelectedCompanyCnpj] = useState<string>("");
+  const [companiesError, setCompaniesError] = useState<string>("");
+  const [isCompaniesLoading, setIsCompaniesLoading] = useState(false);
+  const [editingCompanyCnpj, setEditingCompanyCnpj] = useState<string | null>(null);
   const [tiposLogradouro, setTiposLogradouro] = useState<DescricaoID[]>([]);
   const [estados, setEstados] = useState<EstadoModel[]>([]);
   const [municipios, setMunicipios] = useState<MunicipioModel[]>([]);
@@ -110,10 +115,65 @@ const PublicCompanyRegistration = () => {
     load();
   }, [utilsClient]);
 
-  const startNewCompanyRegistration = () => {
-    const normalized = onlyDigits(checkForm.getValues("cnpj"));
+  const loadCompanies = async () => {
+    setIsCompaniesLoading(true);
+    setCompaniesError("");
+    try {
+      const list = await apiClient.api.listEmpresasFromBusca();
+      setCompanies(list);
+    } catch (e) {
+      setCompanies([]);
+      setCompaniesError(e instanceof Error ? e.message : "Não foi possível carregar as empresas cadastradas.");
+    } finally {
+      setIsCompaniesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCompanies();
+  }, [apiClient]);
+
+  const empresaToFormValues = (empresa: EmpresaModel): CompanyRegistrationValues => {
+    const cnpjDigits = digitsOnly(empresa.cnpj ?? "");
+    const endereco = empresa.endereco;
+    return {
+      cnpj: formatCnpj(cnpjDigits),
+      nomeOficial: empresa.nomeOficial ?? "",
+      nomeFantasia: empresa.nomeFantasia ?? "",
+      webSite: empresa.webSite ?? "",
+      experiencia: empresa.experiencia ?? "",
+      enderecos: [
+        {
+          tipoLogradouro: endereco?.tipoLogradouro ?? 1,
+          nomeLogradouro: endereco?.nomeLogradouro ?? "",
+          numero: endereco?.numero ?? "",
+          complemento: endereco?.complemento ?? "",
+          bairro: endereco?.bairro ?? "",
+          municipio: {
+            id: endereco?.municipio?.id as any,
+            descricao: endereco?.municipio?.descricao ?? "",
+            estado: {
+              id: endereco?.municipio?.estado?.id as any,
+              descricao: endereco?.municipio?.estado?.descricao ?? "",
+              sigla: endereco?.municipio?.estado?.sigla ?? "",
+            },
+          },
+          cep: endereco?.cep ?? "",
+          observacoes: endereco?.observacoes ?? "",
+        },
+      ],
+      responsavelLegalNome: empresa.responsavelLegalNome ?? "",
+      responsavelLegalCPF: empresa.responsavelLegalCPF ?? "",
+      responsavelLegalRG: empresa.responsavelLegalRG ?? "",
+      responsavelLegalCargo: empresa.responsavelLegalCargo ?? "",
+      responsavelLegalEmail: empresa.responsavelLegalEmail ?? "",
+    };
+  };
+
+  const startNewCompanyRegistration = (cnpjDigits?: string) => {
+    setEditingCompanyCnpj(null);
     setMode("register");
-    registerForm.reset(defaults(formatCnpj(normalized)));
+    registerForm.reset(defaults(cnpjDigits ? formatCnpj(cnpjDigits) : ""));
   };
 
   const onCheck = async (values: CompanyCheckValues) => {
@@ -192,10 +252,18 @@ const PublicCompanyRegistration = () => {
         throw new Error("Sessão não validada. Faça login novamente (cookie/token) antes de cadastrar empresa.");
       }
 
-      await apiClient.api.createEmpresa(payload);
-      toast({ title: "Empresa cadastrada", description: "Cadastro finalizado com sucesso." });
-      localStorage.setItem(PENDING_COMPANY_CNPJ_KEY, cnpj);
-      navigate("/listagem-empresas");
+      if (editingCompanyCnpj) {
+        await apiClient.api.updateEmpresaPost(payload);
+        toast({ title: "Empresa atualizada", description: "Alterações salvas com sucesso." });
+        setMode("check");
+        setEditingCompanyCnpj(null);
+        await loadCompanies();
+      } else {
+        await apiClient.api.createEmpresa(payload);
+        toast({ title: "Empresa cadastrada", description: "Cadastro finalizado com sucesso." });
+        localStorage.setItem(PENDING_COMPANY_CNPJ_KEY, cnpj);
+        navigate("/listagem-empresas");
+      }
     } catch (error) {
       const status = error instanceof ApiError ? error.status : undefined;
       const statusSuffix = status ? ` (HTTP ${status})` : "";
@@ -240,22 +308,50 @@ const PublicCompanyRegistration = () => {
                   name="cnpj"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel className="text-sm font-medium text-foreground block">CNPJ</FormLabel>
-                      <FormControl>
-                        <Field>
-                          <Landmark aria-hidden="true" className="field-icon h-5 w-5 text-muted-foreground" />
-                          <Input
-                            {...field}
-                            placeholder="00.000.000/0000-00"
-                            inputMode="numeric"
-                            autoComplete="off"
-                            className="pl-10"
-                            value={field.value ?? ""}
-                            onKeyDown={allowOnlyDigitsKeyDown}
-                            onChange={(e) => field.onChange(formatCnpj(e.target.value))}
-                          />
-                        </Field>
-                      </FormControl>
+                      <FormLabel className="text-sm font-medium text-foreground block">Empresas cadastradas</FormLabel>
+                      <Select
+                        value={selectedCompanyCnpj}
+                        onValueChange={(value) => {
+                          if (value === "__create_company__") {
+                            startNewCompanyRegistration();
+                            return;
+                          }
+                          setSelectedCompanyCnpj(value);
+                          field.onChange(formatCnpj(value));
+                        }}
+                        disabled={isCompaniesLoading || isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                isCompaniesLoading
+                                  ? "Carregando empresas..."
+                                  : companies.length > 0
+                                    ? "Selecione a empresa"
+                                    : "Nenhuma empresa encontrada"
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {companies
+                            .map((c) => {
+                              const cnpjDigits = digitsOnly(c.cnpj ?? "");
+                              if (!cnpjDigits) return null;
+                              const name = (c.nomeFantasia?.trim() || c.nomeOficial?.trim() || "").trim();
+                              const label = `${formatCnpj(cnpjDigits)}${name ? ` - ${name}` : ""}`;
+                              return (
+                                <SelectItem key={c.id ?? cnpjDigits} value={cnpjDigits}>
+                                  {label}
+                                </SelectItem>
+                              );
+                            })
+                            .filter(Boolean)}
+                          <SelectItem value="__create_company__">Cadastrar nova empresa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {companiesError ? <p className="text-sm text-destructive">{companiesError}</p> : null}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -274,7 +370,30 @@ const PublicCompanyRegistration = () => {
                   type="button"
                   variant="outline"
                   className="w-full h-11"
-                  onClick={startNewCompanyRegistration}
+                  onClick={() => {
+                    const selected = companies.find((c) => digitsOnly(c.cnpj ?? "") === selectedCompanyCnpj) ?? null;
+                    if (!selected) {
+                      toast({
+                        title: "Selecione uma empresa",
+                        description: "Escolha uma empresa cadastrada para editar.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    setEditingCompanyCnpj(digitsOnly(selected.cnpj ?? ""));
+                    setMode("register");
+                    registerForm.reset(empresaToFormValues(selected));
+                  }}
+                  disabled={!selectedCompanyCnpj || isSubmitting || isCompaniesLoading}
+                >
+                  Editar empresa
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11"
+                  onClick={() => startNewCompanyRegistration()}
                   disabled={isSubmitting}
                 >
                   Cadastrar nova empresa
@@ -302,6 +421,7 @@ const PublicCompanyRegistration = () => {
                             inputMode="numeric"
                             autoComplete="off"
                             className="pl-10"
+                            disabled={Boolean(editingCompanyCnpj)}
                             value={field.value ?? ""}
                             onKeyDown={allowOnlyDigitsKeyDown}
                             onChange={(e) => field.onChange(formatCnpj(e.target.value))}
@@ -730,7 +850,7 @@ const PublicCompanyRegistration = () => {
             <div className="shrink-0 pt-4 border-t border-border/50 bg-transparent dark:bg-background/60 dark:backdrop-blur-sm">
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button type="button" variant="outline" className="w-full h-11" onClick={() => setMode("check")} disabled={isSubmitting}>
-                  Voltar para verificação de CNPJ
+                  {editingCompanyCnpj ? "Cancelar edição" : "Voltar para verificação de CNPJ"}
                 </Button>
                 <Button
                   type="submit"
@@ -738,7 +858,7 @@ const PublicCompanyRegistration = () => {
                   className="w-full font-semibold h-11"
                   disabled={!registerForm.formState.isValid || isSubmitting}
                 >
-                  {isSubmitting ? "Cadastrando..." : "Cadastrar empresa e continuar"}
+                  {isSubmitting ? (editingCompanyCnpj ? "Salvando..." : "Cadastrando...") : editingCompanyCnpj ? "Salvar alterações" : "Cadastrar empresa e continuar"}
                 </Button>
               </div>
             </div>

@@ -175,6 +175,17 @@ export class SistemaLoginBackApi {
     }
   }
 
+  async updateEmpresaPost(payload: EmpresaModel): Promise<void> {
+    try {
+      const parsed = empresaModelSchema.parse(payload);
+      await this.http.post("/cadastro/empresa", parsed, {
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (err) {
+      throw ApiError.fromUnknown(err, "Falha ao atualizar empresa.");
+    }
+  }
+
   async linkEmpresaUsuario(payload: EmpresaModel): Promise<void> {
     try {
       const parsed = empresaModelSchema.parse(payload);
@@ -191,7 +202,7 @@ export class SistemaLoginBackApi {
         usuario: parsed.usuario,
         cnpj: parsed.cnpj,
       };
-      const response = await this.http.post("/cadastro/adminempresa", apiPayload, {
+      const response = await this.http.put("/cadastro/adminempresa", apiPayload, {
         headers: { "Content-Type": "application/json" },
       });
       const retorno = retornoPadraoSchema.safeParse(response.data);
@@ -210,6 +221,26 @@ export class SistemaLoginBackApi {
       const apiError = ApiError.fromUnknown(err);
       if (apiError.kind === "http" && apiError.status === 400) return null;
       throw ApiError.fromUnknown(err, "Falha ao buscar empresa.");
+    }
+  }
+
+  async listEmpresasFromBusca(): Promise<EmpresaModel[]> {
+    try {
+      const response = await this.http.get("/busca/empresa");
+      const data = response.data;
+      if (Array.isArray(data)) {
+        return data
+          .map((item) => empresaModelSchema.safeParse(item))
+          .filter((r): r is { success: true; data: EmpresaModel } => r.success)
+          .map((r) => r.data);
+      }
+
+      const parsed = empresaModelSchema.safeParse(data);
+      return parsed.success ? [parsed.data] : [];
+    } catch (err) {
+      const apiError = ApiError.fromUnknown(err);
+      if (apiError.kind === "http" && apiError.status === 400) return [];
+      throw ApiError.fromUnknown(err, "Falha ao buscar empresas.");
     }
   }
 

@@ -26,7 +26,23 @@ export const userRegistrationSchema = z
     nome: z.string().min(3, "Nome obrigatório"),
     login: z.string().min(3, "Login deve ter no mínimo 3 caracteres"),
     email: z.string().email("E-mail inválido"),
-    senhaNova: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+    cpf: z
+      .string()
+      .refine((v) => onlyDigits(v).length === 11, "CPF inválido"),
+    dataNascimento: z
+      .string()
+      .refine((v) => /^\d{4}-\d{2}-\d{2}$/.test(v), "Data de nascimento inválida"),
+    senhaNova: z
+      .string()
+      .min(8, "Senha deve ter no mínimo 8 caracteres")
+      .refine((v) => /[A-Z]/.test(v), "Senha deve conter ao menos 1 letra maiúscula")
+      .refine((v) => /[a-z]/.test(v), "Senha deve conter ao menos 1 letra minúscula")
+      .refine((v) => /\d/.test(v), "Senha deve conter ao menos 1 número")
+      .refine(
+        (v) => /[!@#$%^&*()_\-+=\[\]{};:,.?/~|]/.test(v),
+        "Senha deve conter ao menos 1 caractere especial válido"
+      )
+      .refine((v) => !/\s/.test(v), "Senha não pode conter espaços"),
     confirmSenhaNova: z.string().min(8, "Confirmação de senha obrigatória"),
     cargo: z.string().min(2, "Cargo obrigatório"),
     departamento: z.string().optional(),

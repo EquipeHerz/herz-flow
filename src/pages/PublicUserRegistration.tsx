@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
-import { Briefcase, Building2, KeyRound, Mail, MapPin, Phone, User, Users } from "lucide-react";
+import { Briefcase, Building2, CalendarDays, Eye, EyeOff, KeyRound, Mail, MapPin, Phone, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   type TipoTelefone,
   type TipoUsuarioEnum,
   type Usuario,
+  type EmpresaModel,
 } from "@/services/sistemaLoginBack";
 import {
   Select,
@@ -32,8 +33,10 @@ import {
 } from "@/services/sistemaUtilsBack";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { formatCnpj } from "@/utils/inputMasks";
 
 const PENDING_COMPANY_CNPJ_KEY = "herz_pending_company_cnpj";
+type UsuarioCadastroPayload = Usuario & { datanascimento?: string };
 
 const PublicUserRegistration = () => {
   const { toast } = useToast();
@@ -41,6 +44,11 @@ const PublicUserRegistration = () => {
   const navigate = useNavigate();
   const apiClient = useMemo(() => createSistemaLoginBackClient(), []);
   const utilsClient = useMemo(() => createSistemaUtilsBackClient(), []);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [companies, setCompanies] = useState<EmpresaModel[]>([]);
+  const [isCompaniesLoading, setIsCompaniesLoading] = useState(false);
+  const [companiesError, setCompaniesError] = useState<string>("");
   const [tiposTelefone, setTiposTelefone] = useState<DescricaoID[]>([]);
   const [tiposLogradouro, setTiposLogradouro] = useState<DescricaoID[]>([]);
   const [estados, setEstados] = useState<EstadoModel[]>([]);
@@ -55,6 +63,8 @@ const PublicUserRegistration = () => {
       nome: "",
       login: "",
       email: "",
+      cpf: "",
+      dataNascimento: "",
       senhaNova: "",
       confirmSenhaNova: "",
       cargo: "",
@@ -89,6 +99,8 @@ const PublicUserRegistration = () => {
   const senhaNova = form.watch("senhaNova");
   const confirmSenhaNova = form.watch("confirmSenhaNova");
   const passwordsMatch = Boolean(senhaNova && confirmSenhaNova && senhaNova === confirmSenhaNova);
+  const selectedCnpjDigits = onlyDigits(cnpj);
+  const isCompanySelected = /^\d{14}$/.test(selectedCnpjDigits);
 
   const phones = useFieldArray({
     control: form.control,
@@ -128,6 +140,29 @@ const PublicUserRegistration = () => {
     if (c) c.remove();
   }, []);
 
+  useEffect(() => {
+    let isCancelled = false;
+    const load = async () => {
+      setIsCompaniesLoading(true);
+      setCompaniesError("");
+      try {
+        const list = await apiClient.api.listEmpresasFromBusca();
+        if (isCancelled) return;
+        setCompanies(list);
+      } catch (e) {
+        if (isCancelled) return;
+        setCompanies([]);
+        setCompaniesError(e instanceof Error ? e.message : "Não foi possível carregar as empresas.");
+      } finally {
+        if (!isCancelled) setIsCompaniesLoading(false);
+      }
+    };
+    load();
+    return () => {
+      isCancelled = true;
+    };
+  }, [apiClient]);
+
   const resolveCnpj = () => {
     const fromInput = onlyDigits(cnpj);
     if (/^\d{14}$/.test(fromInput)) {
@@ -136,7 +171,7 @@ const PublicUserRegistration = () => {
     }
     const stored = localStorage.getItem(PENDING_COMPANY_CNPJ_KEY);
     if (stored && /^\d{14}$/.test(stored)) return stored;
-    throw new Error("CNPJ obrigatório");
+    throw new Error("Selecione uma empresa.");
   };
 
   const onSubmit = async (values: UserRegistrationValues) => {
@@ -149,17 +184,20 @@ const PublicUserRegistration = () => {
 
       const empresa = await apiClient.api.searchEmpresaByCnpj(resolvedCnpj);
       if (!empresa) {
-        throw new Error("Empresa não encontrada para o CNPJ informado. Cadastre a empresa antes de criar o usuário.");
+        throw new Error("CNPJ não encontrado. Cadastre a empresa antes de criar o usuário ou informe outro CNPJ.");
       }
 
       const parsedTipoUsuario = Number(values.tipoUsuario);
       const tipoUsuario = (Number.isFinite(parsedTipoUsuario) ? parsedTipoUsuario : 2) as TipoUsuarioEnum;
       const nowIso = new Date().toISOString();
 
-      const usuario: Usuario = {
+      const usuario: UsuarioCadastroPayload = {
         nome: values.nome,
         login: values.login,
         email: values.email,
+        cpf: onlyDigits(values.cpf),
+        dataNascimento: values.dataNascimento,
+        datanascimento: values.dataNascimento,
         senhaAtual: values.senhaNova,
         senhaNova: values.senhaNova,
         autenticado: true,
@@ -226,19 +264,51 @@ const PublicUserRegistration = () => {
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 min-h-0 flex flex-col">
           <div className="flex-1 min-h-0 minimal-scroll pr-1 space-y-6 pb-6">
             <FormItem className="space-y-2">
-              <FormLabel className="text-sm font-medium text-foreground block">CNPJ da empresa</FormLabel>
-              <FormControl>
-                <Field>
-                  <Building2 aria-hidden="true" className="field-icon h-5 w-5 text-muted-foreground" />
-                  <Input
-                    placeholder="00.000.000/0000-00"
-                    value={cnpj}
-                    onChange={(e) => setCnpj(e.target.value)}
-                    className="pl-10"
-                    inputMode="numeric"
-                  />
-                </Field>
-              </FormControl>
+              <FormLabel className="text-sm font-medium text-foreground block">Empresa</FormLabel>
+              <Select
+                value={isCompanySelected ? selectedCnpjDigits : ""}
+                onValueChange={(value) => {
+                  if (value === "__create_company__") {
+                    navigate("/registro-empresa");
+                    return;
+                  }
+                  setCnpj(value);
+                  localStorage.setItem(PENDING_COMPANY_CNPJ_KEY, value);
+                }}
+                disabled={isCompaniesLoading}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        isCompaniesLoading
+                          ? "Carregando empresas..."
+                          : companies.length > 0
+                            ? "Selecione a empresa"
+                            : "Nenhuma empresa encontrada"
+                      }
+                    />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {companies
+                    .map((c) => {
+                      const cnpjDigits = onlyDigits(c.cnpj ?? "");
+                      if (!cnpjDigits) return null;
+                      const name = (c.nomeFantasia?.trim() || c.nomeOficial?.trim() || "").trim();
+                      const label = `${formatCnpj(cnpjDigits)}${name ? ` - ${name}` : ""}`;
+                      return (
+                        <SelectItem key={c.id ?? cnpjDigits} value={cnpjDigits}>
+                          {label}
+                        </SelectItem>
+                      );
+                    })
+                    .filter(Boolean)}
+
+                  <SelectItem value="__create_company__">Cadastrar empresa</SelectItem>
+                </SelectContent>
+              </Select>
+              {companiesError ? <p className="text-sm text-destructive">{companiesError}</p> : null}
             </FormItem>
 
             <FormField
@@ -295,6 +365,42 @@ const PublicUserRegistration = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
+                name="cpf"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel className="text-sm font-medium text-foreground block">CPF</FormLabel>
+                    <FormControl>
+                      <Field>
+                        <User aria-hidden="true" className="field-icon h-5 w-5 text-muted-foreground" />
+                        <Input placeholder="00000000000" inputMode="numeric" className="pl-10" {...field} />
+                      </Field>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dataNascimento"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel className="text-sm font-medium text-foreground block">Data de nascimento</FormLabel>
+                    <FormControl>
+                      <Field>
+                        <CalendarDays aria-hidden="true" className="field-icon h-5 w-5 text-muted-foreground" />
+                        <Input type="date" className="pl-10" {...field} />
+                      </Field>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
                 name="senhaNova"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
@@ -302,7 +408,21 @@ const PublicUserRegistration = () => {
                     <FormControl>
                       <Field>
                         <KeyRound aria-hidden="true" className="field-icon h-5 w-5 text-muted-foreground" />
-                        <Input type="password" placeholder="••••••••" autoComplete="new-password" className="pl-10" {...field} />
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          autoComplete="new-password"
+                          className="pl-10 pr-10"
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowPassword((v) => !v)}
+                        >
+                          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
                       </Field>
                     </FormControl>
                     <FormMessage />
@@ -319,7 +439,21 @@ const PublicUserRegistration = () => {
                     <FormControl>
                       <Field>
                         <KeyRound aria-hidden="true" className="field-icon h-5 w-5 text-muted-foreground" />
-                        <Input type="password" placeholder="••••••••" autoComplete="new-password" className="pl-10" {...field} />
+                        <Input
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          autoComplete="new-password"
+                          className="pl-10 pr-10"
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowConfirmPassword((v) => !v)}
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
                       </Field>
                     </FormControl>
                     <FormMessage />
@@ -327,6 +461,10 @@ const PublicUserRegistration = () => {
                 )}
               />
             </div>
+
+            <p className="text-sm text-muted-foreground">
+              A senha deve ter no mínimo 8 caracteres, com letra maiúscula, letra minúscula, número e caractere especial.
+            </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
@@ -759,7 +897,7 @@ const PublicUserRegistration = () => {
                 type="submit"
                 variant="default"
                 className="w-full font-semibold h-11"
-                disabled={isLoading || !isValid || !passwordsMatch}
+                disabled={isLoading || !isValid || !passwordsMatch || !isCompanySelected}
               >
                 {isLoading ? "Finalizando..." : "Finalizar cadastro"}
               </Button>
