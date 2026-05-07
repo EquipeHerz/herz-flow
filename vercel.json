@@ -1,4 +1,5 @@
 {
+  "version": 2,
   "routes": [
     { "src": "^/utilsapi(?:/(.*))?$", "dest": "/api/utilsapi/$1" },
     { "handle": "filesystem" },

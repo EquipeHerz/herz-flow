@@ -31,8 +31,25 @@ const stripCookieDomain = (headerValue) => {
   return parts.join("; ");
 };
 
+const applyCors = (req, res) => {
+  const origin = typeof req.headers?.origin === "string" ? req.headers.origin : null;
+  if (!origin) return;
+  res.setHeader("access-control-allow-origin", origin);
+  res.setHeader("vary", "origin");
+  res.setHeader("access-control-allow-credentials", "true");
+  res.setHeader("access-control-allow-methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  res.setHeader("access-control-allow-headers", "Content-Type, Authorization");
+};
+
 export default async function handler(req, res) {
   try {
+    applyCors(req, res);
+    if ((req.method ?? "GET").toUpperCase() === "OPTIONS") {
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+
     const backendBase = process.env.SISTEMA_LOGIN_BACK_URL || "http://72.60.142.80:9588";
     const url = typeof req.url === "string" ? req.url : "";
     const prefix = "/api";
