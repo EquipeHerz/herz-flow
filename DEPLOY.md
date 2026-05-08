@@ -37,6 +37,19 @@ Certifique-se de ter o Node.js instalado.
 
 *   O arquivo `vercel.json` já está configurado para lidar com as rotas do React (Single Page Application).
 *   O build do projeto (`npm run build`) foi testado e está funcionando corretamente.
+*   As rotas de API em produção no Vercel são atendidas por Serverless Functions no diretório `api/`:
+    - `GET/POST/... /api/*` (proxy do Login Back)
+    - `GET/POST/... /utilsapi/*` (proxy do Utils Back)
+
+## Variáveis de ambiente (Vercel)
+
+Configure as variáveis abaixo no painel do Vercel (Environment Variables), para **Production**:
+
+* `SISTEMA_LOGIN_BACK_URL` — URL base do backend de login (ex.: `https://seu-backend-login`)
+* `SISTEMA_UTILS_BACK_URL` — URL base do backend de utils (ex.: `https://seu-backend-utils`)
+
+Observação:
+* Se não configurar, o proxy usa fallback para `http://72.60.142.80:9588` (login) e `http://72.60.142.80:9589` (utils).
 
 # Deploy na Hostinger (Static)
 
@@ -55,3 +68,14 @@ Para Hostinger (hospedagem de site estático via Apache/Nginx), o artefato de de
 3. Garanta o fallback de SPA (React Router) no servidor.
    - Este projeto inclui um `.htaccess` no diretório `public/` para ser copiado ao `dist/` durante o build (Apache).
    - Se seu plano usar Nginx, configure o equivalente de fallback para `index.html`.
+
+## API na Hostinger (mesma funcionalidade do localhost/Vercel)
+
+O build já inclui proxies compatíveis com Apache/PHP para manter os endpoints funcionando em ambiente **static**:
+
+* `/api/*` encaminha para o Login Back (configurável por env `SISTEMA_LOGIN_BACK_URL`)
+* `/utilsapi/*` encaminha para o Utils Back (configurável por env `SISTEMA_UTILS_BACK_URL`)
+
+Requisitos:
+* Apache com `mod_rewrite` habilitado
+* PHP com extensão `curl` habilitada

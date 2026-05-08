@@ -44,6 +44,19 @@ const stripCookieDomain = (headerValue) => {
   return parts.join("; ");
 };
 
+const getSetCookieHeaders = (upstreamHeaders) => {
+  if (!upstreamHeaders) return [];
+  const anyHeaders = upstreamHeaders;
+  if (typeof anyHeaders.getSetCookie === "function") return anyHeaders.getSetCookie();
+  if (typeof anyHeaders.raw === "function") {
+    const raw = anyHeaders.raw();
+    const arr = raw?.["set-cookie"];
+    return Array.isArray(arr) ? arr : [];
+  }
+  const single = upstreamHeaders.get?.("set-cookie");
+  return single ? [single] : [];
+};
+
 const applyCors = (req, res) => {
   const origin = typeof req.headers?.origin === "string" ? req.headers.origin : null;
   if (!origin) return;
@@ -102,17 +115,20 @@ export default async function handler(req, res) {
       }
     }
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25_000);
     const upstream = await fetch(targetUrl, {
       method: req.method,
       headers: toForwardHeaders(req.headers),
       body,
       redirect: "manual",
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 
     res.statusCode = upstream.status;
 
-    const setCookie = upstream.headers.get("set-cookie");
-    if (setCookie) res.setHeader("set-cookie", stripCookieDomain(setCookie));
+    const setCookies = getSetCookieHeaders(upstream.headers);
+    if (setCookies.length) res.setHeader("set-cookie", setCookies.map(stripCookieDomain));
 
     const contentType = upstream.headers.get("content-type");
     if (contentType) res.setHeader("content-type", contentType);

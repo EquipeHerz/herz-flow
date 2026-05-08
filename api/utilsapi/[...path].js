@@ -44,6 +44,19 @@ const applyCors = (req, res) => {
   res.setHeader("access-control-allow-headers", "Content-Type, Authorization");
 };
 
+const getSetCookieHeaders = (upstreamHeaders) => {
+  if (!upstreamHeaders) return [];
+  const anyHeaders = upstreamHeaders;
+  if (typeof anyHeaders.getSetCookie === "function") return anyHeaders.getSetCookie();
+  if (typeof anyHeaders.raw === "function") {
+    const raw = anyHeaders.raw();
+    const arr = raw?.["set-cookie"];
+    return Array.isArray(arr) ? arr : [];
+  }
+  const single = upstreamHeaders.get?.("set-cookie");
+  return single ? [single] : [];
+};
+
 export default async function handler(req, res) {
   try {
     applyCors(req, res);
@@ -61,14 +74,20 @@ export default async function handler(req, res) {
 
     const body = await readRequestBody(req);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25_000);
     const upstream = await fetch(targetUrl, {
       method: req.method,
       headers: toForwardHeaders(req.headers),
       body,
       redirect: "manual",
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 
     res.statusCode = upstream.status;
+
+    const setCookies = getSetCookieHeaders(upstream.headers);
+    if (setCookies.length) res.setHeader("set-cookie", setCookies);
 
     const contentType = upstream.headers.get("content-type");
     if (contentType) res.setHeader("content-type", contentType);

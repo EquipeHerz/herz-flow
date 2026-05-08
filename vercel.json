@@ -1,5 +1,13 @@
 {
   "version": 2,
+  "functions": {
+    "api/[...path].js": {
+      "maxDuration": 30
+    },
+    "api/utilsapi/[...path].js": {
+      "maxDuration": 30
+    }
+  },
   "routes": [
     { "src": "^/utilsapi(?:/(.*))?$", "dest": "/api/utilsapi/$1" },
     { "handle": "filesystem" },
