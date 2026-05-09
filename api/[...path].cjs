@@ -21,17 +21,34 @@ const toForwardHeaders = (headers) => {
   for (const [key, value] of Object.entries(headers ?? {})) {
     if (value == null) continue;
     const lower = key.toLowerCase();
-    if (
-      lower === "host" ||
-      lower === "connection" ||
-      lower === "content-length" ||
-      lower === "transfer-encoding"
-    ) {
+    if (lower === "host" || lower === "connection" || lower === "content-length" || lower === "transfer-encoding") {
       continue;
     }
     out[key] = Array.isArray(value) ? value.join(",") : value;
   }
   return out;
+};
+
+const stripCookieDomain = (headerValue) => {
+  if (typeof headerValue !== "string") return headerValue;
+  const parts = headerValue
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => !p.toLowerCase().startsWith("domain="));
+  return parts.join("; ");
+};
+
+const getSetCookieHeaders = (upstreamHeaders) => {
+  if (!upstreamHeaders) return [];
+  if (typeof upstreamHeaders.getSetCookie === "function") return upstreamHeaders.getSetCookie();
+  if (typeof upstreamHeaders.raw === "function") {
+    const raw = upstreamHeaders.raw();
+    const arr = raw?.["set-cookie"];
+    return Array.isArray(arr) ? arr : [];
+  }
+  const single = upstreamHeaders.get?.("set-cookie");
+  return single ? [single] : [];
 };
 
 const applyCors = (req, res) => {
@@ -44,20 +61,18 @@ const applyCors = (req, res) => {
   res.setHeader("access-control-allow-headers", "Content-Type, Authorization");
 };
 
-const getSetCookieHeaders = (upstreamHeaders) => {
-  if (!upstreamHeaders) return [];
-  const anyHeaders = upstreamHeaders;
-  if (typeof anyHeaders.getSetCookie === "function") return anyHeaders.getSetCookie();
-  if (typeof anyHeaders.raw === "function") {
-    const raw = anyHeaders.raw();
-    const arr = raw?.["set-cookie"];
-    return Array.isArray(arr) ? arr : [];
+const tryParseJsonBody = (bodyBuffer) => {
+  if (!bodyBuffer || !Buffer.isBuffer(bodyBuffer) || bodyBuffer.length === 0) return null;
+  const raw = bodyBuffer.toString("utf8").trim();
+  if (!raw || (!raw.startsWith("{") && !raw.startsWith("["))) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
   }
-  const single = upstreamHeaders.get?.("set-cookie");
-  return single ? [single] : [];
 };
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     applyCors(req, res);
     if ((req.method ?? "GET").toUpperCase() === "OPTIONS") {
@@ -66,13 +81,33 @@ export default async function handler(req, res) {
       return;
     }
 
-    const backendBase = process.env.SISTEMA_UTILS_BACK_URL || "http://72.60.142.80:9589";
+    const backendBase = process.env.SISTEMA_LOGIN_BACK_URL || "http://72.60.142.80:9588";
     const url = typeof req.url === "string" ? req.url : "";
-    const prefix = "/api/utilsapi";
+    const prefix = "/api";
     const relative = url.startsWith(prefix) ? url.slice(prefix.length) : url;
     const targetUrl = `${backendBase}${relative.startsWith("/") ? relative : `/${relative}`}`;
 
-    const body = await readRequestBody(req);
+    let body = await readRequestBody(req);
+    const method = (req.method ?? "GET").toUpperCase();
+
+    if ((method === "POST" || method === "PUT" || method === "PATCH") && relative.startsWith("/cadastro/adminempresa")) {
+      const parsed = tryParseJsonBody(body);
+      if (parsed && typeof parsed === "object") {
+        const { normalizeAdminEmpresaPayload } = await import("./_lib/normalizeAdminEmpresaPayload.js");
+        const normalized = normalizeAdminEmpresaPayload(parsed);
+        body = Buffer.from(JSON.stringify(normalized.payload));
+        console.log(
+          JSON.stringify({
+            event: "adminempresa_upsert",
+            method,
+            path: relative,
+            passwordAction: normalized.audit.passwordAction,
+            userId: normalized.audit.userId,
+            login: normalized.audit.login,
+          })
+        );
+      }
+    }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25_000);
@@ -87,7 +122,7 @@ export default async function handler(req, res) {
     res.statusCode = upstream.status;
 
     const setCookies = getSetCookieHeaders(upstream.headers);
-    if (setCookies.length) res.setHeader("set-cookie", setCookies);
+    if (setCookies.length) res.setHeader("set-cookie", setCookies.map(stripCookieDomain));
 
     const contentType = upstream.headers.get("content-type");
     if (contentType) res.setHeader("content-type", contentType);
@@ -99,9 +134,10 @@ export default async function handler(req, res) {
     res.setHeader("content-type", "application/json; charset=utf-8");
     res.end(
       JSON.stringify({
-        message: "Falha ao encaminhar requisição para o backend utils.",
+        message: "Falha ao encaminhar requisição para o backend.",
         error: err instanceof Error ? err.message : String(err),
       })
     );
   }
-}
+};
+
