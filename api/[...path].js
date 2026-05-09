@@ -41,12 +41,8 @@ const stripCookieDomain = (headerValue) => {
 
 const getSetCookieHeaders = (upstreamHeaders) => {
   if (!upstreamHeaders) return [];
-  if (typeof upstreamHeaders.getSetCookie === "function") return upstreamHeaders.getSetCookie();
-  if (typeof upstreamHeaders.raw === "function") {
-    const raw = upstreamHeaders.raw();
-    const arr = raw?.["set-cookie"];
-    return Array.isArray(arr) ? arr : [];
-  }
+  const anyHeaders = upstreamHeaders;
+  if (typeof anyHeaders.getSetCookie === "function") return anyHeaders.getSetCookie();
   const single = upstreamHeaders.get?.("set-cookie");
   return single ? [single] : [];
 };
@@ -72,7 +68,7 @@ const tryParseJsonBody = (bodyBuffer) => {
   }
 };
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
     applyCors(req, res);
     if ((req.method ?? "GET").toUpperCase() === "OPTIONS") {
@@ -139,5 +135,5 @@ module.exports = async function handler(req, res) {
       })
     );
   }
-};
+}
 
