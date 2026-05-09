@@ -26,6 +26,12 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     proxy: {
+      "/api/utilsapi": {
+        target: "http://72.60.142.80:9589",
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/utilsapi/, ""),
+      },
       "/api": {
         target: "http://72.60.142.80:9588",
         changeOrigin: true,

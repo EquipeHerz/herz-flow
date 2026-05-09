@@ -1,10 +1,10 @@
 {
   "version": 2,
   "functions": {
-    "api/[...path].js": {
+    "api/proxy.js": {
       "maxDuration": 30
     },
-    "api/utilsapi/[...path].js": {
+    "api/utilsproxy.js": {
       "maxDuration": 30
     },
     "api/ping.js": {
@@ -12,8 +12,10 @@
     }
   },
   "rewrites": [
-    { "source": "/utilsapi/:path*", "destination": "/api/utilsapi/:path*" },
-    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/api/ping", "destination": "/api/ping" },
+    { "source": "/api/utilsapi/:path*", "destination": "/api/utilsproxy?path=:path*" },
+    { "source": "/utilsapi/:path*", "destination": "/api/utilsproxy?path=:path*" },
+    { "source": "/api/:path((?!ping$)(?!proxy$)(?!utilsproxy$).*)", "destination": "/api/proxy?path=:path" },
     { "source": "/:path((?!api/)(?!utilsapi/).*)", "destination": "/index.html" }
   ]
 }
