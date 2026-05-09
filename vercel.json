@@ -8,9 +8,9 @@
       "maxDuration": 30
     }
   },
-  "routes": [
-    { "src": "^/utilsapi(?:/(.*))?$", "dest": "/api/utilsapi/$1" },
-    { "handle": "filesystem" },
-    { "src": "^/(?!api(?:/|$))(?!utilsapi(?:/|$)).*", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/utilsapi/:path*", "destination": "/api/utilsapi/:path*" },
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/:path((?!api/)(?!utilsapi/).*)", "destination": "/index.html" }
   ]
 }
