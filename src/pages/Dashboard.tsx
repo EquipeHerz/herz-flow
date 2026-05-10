@@ -61,6 +61,7 @@ const Dashboard = () => {
   const [apiConversations, setApiConversations] = useState<Conversation[]>([]);
   const conversationIdMapRef = useRef<Map<string, string>>(new Map());
   const nextConversationIdRef = useRef(1);
+  const statusOverrideRef = useRef<Record<string, 'HUMANO'>>({});
   const toMillis = (v: any): number | null => {
     if (v === null || v === undefined) return null;
     if (typeof v === "number") return v < 1e12 ? v * 1000 : v;
@@ -71,6 +72,15 @@ const Dashboard = () => {
       if (!isNaN(n)) return n < 1e12 ? n * 1000 : n;
     }
     return null;
+  };
+  const normalizeTempoMillis = (v: any): number | null => {
+    const ms = toMillis(v);
+    if (ms === null) return null;
+    if (typeof v !== "string") return ms;
+    const s = v.trim();
+    const hasTimezone = s.endsWith("Z") || s.includes("+") || (s.includes("-") && s.lastIndexOf("-") > 7);
+    if (hasTimezone) return ms;
+    return ms - 3 * 60 * 60 * 1000;
   };
   const relativeFromNow = (v: any): string => {
     const ms = toMillis(v);
@@ -198,11 +208,39 @@ const Dashboard = () => {
 
         const social = last?.redesocial || list.find(i => i.redesocial)?.redesocial;
 
-        const statusInteraction = list.slice().reverse().find(i => i.stats_atend);
+        const statusInteraction = ordered.slice().reverse().find(i => i.stats_atend);
         let status = 'IA';
         const rawStatus = (statusInteraction?.stats_atend || "IA").toUpperCase();
         if (rawStatus === "HUMANO") status = "HUMANO";
         else if (rawStatus === "FINALIZADO") status = "FINALIZADO";
+        if (status === "FINALIZADO") {
+          const finalizeMarker = ordered
+            .slice()
+            .reverse()
+            .find((i) => {
+              if (String((i as any).stats_atend ?? "").trim().toUpperCase() !== "FINALIZADO") return false;
+              const msgText = String((i as any).msg ?? "").trim().toLowerCase();
+              const sendText = String((i as any).send_msg ?? "").trim().toLowerCase();
+              return msgText.includes("atendimento finalizado") || sendText.includes("atendimento finalizado");
+            });
+
+          const statusMs = normalizeTempoMillis(((finalizeMarker ?? statusInteraction) as any)?.tempo ?? ((finalizeMarker ?? statusInteraction) as any)?.timestamp) ?? null;
+          if (statusMs !== null) {
+            const hasClientAfterFinalize = ordered.some((i) => {
+              const clientText = String((i as any).msg ?? "").trim();
+              if (!clientText) return false;
+              const agentText = String((i as any).send_msg ?? "").trim();
+              const isMirroredAgentPayload = clientText !== "" && agentText !== "" && clientText === agentText && !!String((i as any).id_agente ?? "").trim();
+              if (isMirroredAgentPayload) return false;
+              if (clientText.toLowerCase().includes("atendimento finalizado")) return false;
+              const m = normalizeTempoMillis((i as any).tempo ?? (i as any).timestamp) ?? null;
+              return m !== null && m > statusMs;
+            });
+            if (hasClientAfterFinalize) status = "IA";
+          }
+        }
+        if (status === "IA" && statusOverrideRef.current[phone] === "HUMANO") status = "HUMANO";
+        if (status === "FINALIZADO") delete statusOverrideRef.current[phone];
 
         return {
           id: stableId,
@@ -224,6 +262,17 @@ const Dashboard = () => {
       setApiConversations([]);
     }
   }, [session, filterEmpresa]);
+
+  const patchConversationByClient = useCallback(
+    (clientName: string, patch: Partial<Conversation>) => {
+      if (patch.status === "HUMANO") statusOverrideRef.current[clientName] = "HUMANO";
+      if (patch.status === "IA" || patch.status === "FINALIZADO") delete statusOverrideRef.current[clientName];
+      setApiConversations((prev) => prev.map((c) => (c.clientName === clientName ? { ...c, ...patch } : c)));
+      setSelectedConversation((prev) => (prev && prev.clientName === clientName ? { ...prev, ...patch } : prev));
+      setChatConversation((prev) => (prev && prev.clientName === clientName ? { ...prev, ...patch } : prev));
+    },
+    []
+  );
 
   useEffect(() => {
     if (!session?.role) return;
@@ -695,6 +744,7 @@ const Dashboard = () => {
         <FullChatModal 
           isOpen={!!chatConversation}
           onClose={() => setChatConversation(null)}
+          onConversationPatch={patchConversationByClient}
           conversation={chatConversation}
           history={session.role === "ADMIN_SISTEMA" ? (apiByPhone[chatConversation.clientName] || []) : []}
         />

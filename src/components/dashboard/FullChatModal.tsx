@@ -33,7 +33,7 @@ type SacWebhookPayload = {
   id_agente?: string;
   redesocial?: string;
   empresa?: string;
-  send_msg: string;
+  send_msg?: string;
   contato?: string;
   display_phone?: string;
   id_sessao?: string;
@@ -46,6 +46,15 @@ type ApiInteractionForSac = ApiInteraction & Partial<SacWebhookPayload>;
 interface FullChatModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onConversationPatch?: (
+    clientName: string,
+    patch: Partial<{
+      status: 'IA' | 'HUMANO' | 'FINALIZADO';
+      lastInteraction: string;
+      preview: string;
+      messages: number;
+    }>
+  ) => void;
   conversation: {
     id: string;
     clientName: string;
@@ -67,13 +76,15 @@ const formatDateTime = (timestamp: string | number | undefined | null) => {
   });
 };
 
-export const FullChatModal = ({ isOpen, onClose, conversation, history: initialHistory }: FullChatModalProps) => {
+export const FullChatModal = ({ isOpen, onClose, onConversationPatch, conversation, history: initialHistory }: FullChatModalProps) => {
   const { user } = useAuth();
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
   const [isAssuming, setIsAssuming] = useState(false);
-  const [localStatus, setLocalStatus] = useState<FullChatModalProps["conversation"]["status"]>(conversation.status);
+  const [localStatus, setLocalStatus] = useState<FullChatModalProps["conversation"]["status"]>(conversation.status ?? "IA");
+  const [assumedByMe, setAssumedByMe] = useState(false);
+  const [shouldCloseOnFinalize, setShouldCloseOnFinalize] = useState(false);
   const [localHistory, setLocalHistory] = useState<ApiInteraction[]>([]);
   const [hasSentViaChat, setHasSentViaChat] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -86,10 +97,14 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
   const alertContextRef = useRef<{ sentAt: number; historyLength: number; lastClientId: string | null } | null>(null);
   
   useEffect(() => {
+    if (!isOpen) return;
     setLocalHistory(initialHistory);
+    setLocalStatus(conversation.status ?? "IA");
     setHasSentViaChat(false);
+    setAssumedByMe(false);
+    setShouldCloseOnFinalize(false);
     alertContextRef.current = null;
-  }, [initialHistory]);
+  }, [isOpen, conversation.clientName]);
 
   useEffect(() => {
     localHistoryRef.current = localHistory;
@@ -135,6 +150,23 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     return null;
   };
 
+  const normalizeTempoMillis = (v: unknown): number | null => {
+    const ms = toMillis(v);
+    if (ms === null) return null;
+    if (typeof v !== "string") return ms;
+    const s = v.trim();
+    const hasTimezone =
+      s.endsWith("Z") || s.includes("+") || (s.includes("-") && s.lastIndexOf("-") > 7);
+    if (hasTimezone) return ms;
+    return ms - 3 * 60 * 60 * 1000;
+  };
+
+  const getInteractionMs = (it: ApiInteraction): number => {
+    const clientMs = normalizeTempoMillis((it as any)?.tempo ?? (it as any)?.timestamp) ?? 0;
+    const agentMs = toMillis((it as any)?.time_sended) ?? 0;
+    return Math.max(clientMs, agentMs);
+  };
+
   const normalizeAtendimentoStatus = (raw: unknown): FullChatModalProps["conversation"]["status"] => {
     const s = String(raw || "").trim().toUpperCase();
     if (s === "HUMANO") return "HUMANO";
@@ -143,11 +175,20 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
   };
 
   const pickLastClientInteraction = (history: ApiInteraction[]) => {
-    const candidates = history.filter(i => typeof i.msg === "string" && i.msg.trim() !== "");
+    const candidates = history.filter((i) => {
+      const clientText = i.msg?.trim() ?? "";
+      const agentText = i.send_msg?.trim() ?? "";
+      const isMirroredAgentPayload =
+        clientText !== "" &&
+        agentText !== "" &&
+        clientText === agentText &&
+        !!i.id_agente;
+      return clientText !== "" && !isMirroredAgentPayload;
+    });
     if (!candidates.length) return null;
     const ordered = candidates.slice().sort((a, b) => {
-      const am = toMillis(a.tempo ?? a.timestamp) ?? 0;
-      const bm = toMillis(b.tempo ?? b.timestamp) ?? 0;
+      const am = normalizeTempoMillis(a.tempo ?? a.timestamp) ?? 0;
+      const bm = normalizeTempoMillis(b.tempo ?? b.timestamp) ?? 0;
       return am - bm;
     });
     return ordered[ordered.length - 1];
@@ -156,9 +197,9 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
   const pickLastInteraction = (history: ApiInteraction[]) => {
     if (!history.length) return null;
     const sorted = history.slice().sort((a, b) => {
-      const aClient = toMillis(a.tempo ?? a.timestamp) ?? 0;
+      const aClient = normalizeTempoMillis(a.tempo ?? a.timestamp) ?? 0;
       const aAgent = toMillis((a as any)?.time_sended) ?? 0;
-      const bClient = toMillis(b.tempo ?? b.timestamp) ?? 0;
+      const bClient = normalizeTempoMillis(b.tempo ?? b.timestamp) ?? 0;
       const bAgent = toMillis((b as any)?.time_sended) ?? 0;
       return Math.max(aClient, aAgent) - Math.max(bClient, bAgent);
     });
@@ -167,9 +208,59 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
 
   useEffect(() => {
     const lastStatusInteraction = [...localHistory].reverse().find(i => i.stats_atend);
-    const next = lastStatusInteraction?.stats_atend ? normalizeAtendimentoStatus(lastStatusInteraction.stats_atend) : normalizeAtendimentoStatus(conversation.status);
+    const baseDerived = lastStatusInteraction?.stats_atend
+      ? normalizeAtendimentoStatus(lastStatusInteraction.stats_atend)
+      : normalizeAtendimentoStatus(conversation.status);
+
+    const derived = (() => {
+      if (baseDerived !== "FINALIZADO") return baseDerived;
+      const finalizeMarker = [...localHistory].reverse().find((i) => {
+        if (normalizeAtendimentoStatus(i.stats_atend) !== "FINALIZADO") return false;
+        const msgText = String(i.msg ?? "").trim().toLowerCase();
+        const sendText = String(i.send_msg ?? "").trim().toLowerCase();
+        return msgText.includes("atendimento finalizado") || sendText.includes("atendimento finalizado");
+      });
+
+      const statusMs = finalizeMarker
+        ? getInteractionMs(finalizeMarker)
+        : lastStatusInteraction
+          ? getInteractionMs(lastStatusInteraction)
+          : 0;
+
+      const hasClientAfterFinalize = localHistory.some((i) => {
+        const clientText = i.msg?.trim() ?? "";
+        const agentText = i.send_msg?.trim() ?? "";
+        const isMirroredAgentPayload =
+          clientText !== "" &&
+          agentText !== "" &&
+          clientText === agentText &&
+          !!i.id_agente;
+        if (clientText === "") return false;
+        if (isMirroredAgentPayload) return false;
+        if (clientText.toLowerCase().includes("atendimento finalizado")) return false;
+        return getInteractionMs(i) > statusMs;
+      });
+      if (hasClientAfterFinalize) return "IA";
+      return baseDerived;
+    })();
+
+    const next = assumedByMe && derived === "IA" ? "HUMANO" : derived;
     setLocalStatus(next);
-  }, [localHistory, conversation.status]);
+  }, [localHistory, conversation.status, assumedByMe]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!conversation.clientName) return;
+    if (!localStatus) return;
+    onConversationPatch?.(conversation.clientName, { status: localStatus as 'IA' | 'HUMANO' | 'FINALIZADO' });
+  }, [isOpen, conversation.clientName, localStatus, onConversationPatch]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!shouldCloseOnFinalize) return;
+    if (localStatus !== "FINALIZADO") return;
+    onClose();
+  }, [isOpen, localStatus, shouldCloseOnFinalize, onClose]);
 
   const buildSacPayload = (
     base: ApiInteraction,
@@ -177,14 +268,11 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     override?: { stats_atend?: SacWebhookPayload["stats_atend"] }
   ): SacWebhookPayload => {
     const b = base as ApiInteractionForSac;
-    const agentId = resolveCurrentAgentId();
-    if (!agentId) {
-      throw new Error("Usuário autenticado sem ID válido para preencher id_agente.");
-    }
+    const agentName = resolveCurrentAgentName();
 
     const normalizedSendMsg = sendMsg.trim();
     const nowIso = new Date().toISOString();
-    const status = override?.stats_atend ?? localStatus ?? b.stats_atend;
+    const status = override?.stats_atend ?? localStatusRef.current ?? b.stats_atend ?? "IA";
     const sessao = (b.sessao ?? b.id_sessao) as SacWebhookPayload["sessao"];
     const id_sessao = (b.id_sessao ?? b.sessao) as SacWebhookPayload["id_sessao"];
 
@@ -193,7 +281,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
       id: b.id,
       tempo: nowIso,
       time_sended: nowIso,
-      id_agente: agentId,
+      id_agente: agentName,
       msg: undefined,
       from: b.from ?? conversation.clientName,
       empresa: conversation.empresa ?? b.empresa,
@@ -201,6 +289,27 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
       ...(id_sessao ? { id_sessao } : {}),
       ...(status ? { stats_atend: status } : {}),
       send_msg: normalizedSendMsg
+    } satisfies SacWebhookPayload;
+  };
+
+  const buildSacPayloadFinalizadoMsg = (base: ApiInteraction, msgText: string): SacWebhookPayload => {
+    const b = base as ApiInteractionForSac;
+    const nowIso = new Date().toISOString();
+    const sessao = (b.sessao ?? b.id_sessao) as SacWebhookPayload["sessao"];
+    const id_sessao = (b.id_sessao ?? b.sessao) as SacWebhookPayload["id_sessao"];
+    return {
+      ...b,
+      id: b.id,
+      tempo: nowIso,
+      time_sended: nowIso,
+      id_agente: resolveCurrentAgentName(),
+      msg: msgText,
+      from: b.from ?? conversation.clientName,
+      empresa: conversation.empresa ?? b.empresa,
+      ...(sessao ? { sessao } : {}),
+      ...(id_sessao ? { id_sessao } : {}),
+      stats_atend: "FINALIZADO",
+      send_msg: msgText
     } satisfies SacWebhookPayload;
   };
 
@@ -291,10 +400,9 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
   useEffect(() => {
     if (!isOpen) return;
     if (!conversation.clientName) return;
-    if (localStatus === "FINALIZADO") return;
 
     let cancelled = false;
-    const intervalMs = localStatus === "IA" || isAssuming ? 3000 : 10000;
+    const intervalMs = localStatus === "IA" || localStatus === "FINALIZADO" || isAssuming ? 3000 : 10000;
 
     const tick = async () => {
       try {
@@ -329,6 +437,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     const base = pickLastClientInteraction(localHistoryRef.current);
     if (!base) return false;
 
+    if (overrideStatus === "FINALIZADO") setShouldCloseOnFinalize(true);
     const optimisticId = Date.now().toString();
     const statusToStore = overrideStatus ?? localStatusRef.current;
     const optimistic: ApiInteraction = {
@@ -336,7 +445,7 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
       from: conversation.clientName,
       send_msg: text,
       time_sended: Date.now(),
-      id_agente: resolveCurrentAgentId() ?? resolveCurrentAgentName(),
+      id_agente: resolveCurrentAgentName(),
       stats_atend: statusToStore
     };
 
@@ -452,26 +561,18 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     }
 
     setIsAssuming(true);
+    setAssumedByMe(true);
+    setLocalStatus("HUMANO");
+    onConversationPatch?.(conversation.clientName, { status: "HUMANO" });
 
     try {
-      const payload = buildSacPayload(base, "", { stats_atend: "IA" });
-      const resp = await postToSac(payload);
-      const respStatus = (resp && typeof resp === "object") ? (resp as Record<string, unknown>)["stats_atend"] : undefined;
-      const nextStatus = normalizeAtendimentoStatus(respStatus);
-      if (nextStatus === "HUMANO") {
-        setLocalStatus("HUMANO");
-        return;
-      }
-
-      const start = Date.now();
-      while (Date.now() - start < 30000) {
-        await new Promise((r) => setTimeout(r, 1500));
-        if (!isOpen) return;
-        if (localStatusRef.current === "HUMANO") return;
-      }
-
-      toast.error("Aguardando confirmação do atendimento HUMANO. Tente novamente.");
+      const ok = await sendAutomaticMessage("Atendente vai assumir o atendimento.", "IA");
+      if (!ok) throw new Error("Falha ao registrar interação de assumir.");
+      await fetchLatestFromApi().catch(() => {});
     } catch (error) {
+      setAssumedByMe(false);
+      setLocalStatus("IA");
+      onConversationPatch?.(conversation.clientName, { status: "IA" });
       toast.error("Não foi possível assumir a conversa. Tente novamente.");
     } finally {
       setIsAssuming(false);
@@ -482,12 +583,6 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     if (!inputMessage.trim() || isSending) return;
     if (isAssuming) return;
     if (localStatus === "IA" || localStatus === "FINALIZADO") return;
-
-    const agentId = resolveCurrentAgentId();
-    if (!agentId) {
-      toast.error("Não foi possível identificar o ID do usuário autenticado.");
-      return;
-    }
     
     setIsSending(true);
     const messageText = inputMessage.trim();
@@ -508,8 +603,8 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
       from: conversation.clientName,
       send_msg: messageText,
       time_sended: Date.now(),
-      id_agente: agentId,
-      stats_atend: localStatus
+      id_agente: resolveCurrentAgentName(),
+      stats_atend: "HUMANO"
     };
 
     setLocalHistory(prev => [...prev, newMessage]);
@@ -532,35 +627,37 @@ export const FullChatModal = ({ isOpen, onClose, conversation, history: initialH
     
     setIsFinishing(true);
     try {
-      const agentId = resolveCurrentAgentId();
-      if (!agentId) {
-        toast.error("Não foi possível identificar o ID do usuário autenticado.");
-        return;
-      }
-
       const base = pickLastInteraction(localHistoryRef.current);
       if (!base) {
         toast.error("Não foi possível localizar a última interação para finalizar o atendimento.");
         return;
       }
 
+      const finishText = "ALERTA: Atendimento finalizado.";
       const optimisticId = `finish-${Date.now()}`;
+      const nowIso = new Date().toISOString();
       setLocalHistory((prev) => [
         ...prev,
         {
           id: optimisticId,
           from: conversation.clientName,
+          msg: finishText,
+          send_msg: finishText,
+          tempo: nowIso,
           stats_atend: "FINALIZADO",
-          id_agente: agentId,
+          id_agente: resolveCurrentAgentName(),
           time_sended: Date.now()
         }
       ]);
 
-      const payload = buildSacPayload(base, "", { stats_atend: "FINALIZADO" });
+      const payload = buildSacPayloadFinalizadoMsg(base, finishText);
       await postToSac(payload);
       await fetchLatestFromApi().catch(() => {});
 
+      setShouldCloseOnFinalize(true);
+      setAssumedByMe(false);
       setLocalStatus("FINALIZADO");
+      onConversationPatch?.(conversation.clientName, { status: "FINALIZADO" });
       toast.success("Atendimento finalizado com sucesso!");
     } catch (error) {
       toast.error("Ocorreu um erro ao finalizar o atendimento.");
